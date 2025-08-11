@@ -486,9 +486,14 @@
                     </select>
                 </div>
                 
-                <button class="btn btn-primary" onclick="generateEmailResponse()">
-                    Generate AI Response
-                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-primary" onclick="generateEmailResponse()">
+                        Generate AI Response
+                    </button>
+                    <button class="btn btn-secondary" onclick="cancelEmailResponse()">
+                        Cancel
+                    </button>
+                </div>
             </div>
             
             <div id="email-response-preview" class="email-response-preview">
@@ -500,6 +505,9 @@
                     </button>
                     <button class="btn btn-secondary" onclick="editResponse()" style="margin-left: 0.5rem;">
                         Edit Response
+                    </button>
+                    <button class="btn btn-secondary" onclick="cancelEmailResponse()" style="margin-left: 0.5rem;">
+                        Cancel
                     </button>
                 </div>
             </div>
