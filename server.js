@@ -11,10 +11,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const session = require('express-session');
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-session-secret',
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: { 
-        secure: process.env.NODE_ENV === 'production',
+        secure: false,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -133,6 +133,17 @@ app.get('/auth/user', (req, res) => {
     res.json({
         user: req.session.user,
         authenticated: true
+    });
+});
+
+app.get('/auth/debug', (req, res) => {
+    res.json({
+        hasSession: !!req.session,
+        sessionId: req.sessionID,
+        hasAccessToken: !!req.session?.accessToken,
+        hasUser: !!req.session?.user,
+        user: req.session?.user,
+        cookies: req.headers.cookie
     });
 });
 
