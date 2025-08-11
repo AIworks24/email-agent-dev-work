@@ -734,7 +734,13 @@
                 const response = await fetch('/api/emails?days=3');
                 if (response.ok) {
                     const data = await response.json();
-                    displayEmailList(data.emails);
+                    // Filter out sent emails (emails where the user is the sender)
+                    const receivedEmails = data.emails.filter(email => {
+                        const userEmail = currentUser?.username;
+                        const fromEmail = email.from?.emailAddress?.address;
+                        return userEmail && fromEmail && fromEmail.toLowerCase() !== userEmail.toLowerCase();
+                    });
+                    displayEmailList(receivedEmails);
                 } else {
                     throw new Error('Failed to fetch emails');
                 }
@@ -748,14 +754,23 @@
             const emailList = document.getElementById('email-list');
             emailList.innerHTML = '';
             
+            if (emails.length === 0) {
+                emailList.innerHTML = '<div style="padding: 1rem; text-align: center; color: #6c757d;">No received emails found in the last 3 days</div>';
+                emailList.style.display = 'block';
+                return;
+            }
+            
             emails.forEach(email => {
                 const emailItem = document.createElement('div');
                 emailItem.className = 'email-item';
-                emailItem.onclick = () => selectEmail(email.id, emailItem);
+                emailItem.onclick = () => selectEmail(email.id, emailItem, email);
+                
+                const isUnread = !email.isRead ? '🔵 ' : '';
+                const hasAttachments = email.hasAttachments ? '📎 ' : '';
                 
                 emailItem.innerHTML = `
-                    <div class="email-subject">${email.subject}</div>
-                    <div class="email-from">From: ${email.from?.emailAddress?.name || email.from?.emailAddress?.address}</div>
+                    <div class="email-subject">${isUnread}${hasAttachments}${email.subject || 'No Subject'}</div>
+                    <div class="email-from">From: ${email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown'}</div>
                     <div class="email-preview">${email.bodyPreview || 'No preview available'}</div>
                 `;
                 
@@ -765,7 +780,7 @@
             emailList.style.display = 'block';
         }
 
-        function selectEmail(emailId, element) {
+        async function selectEmail(emailId, element, emailData) {
             // Remove previous selection
             document.querySelectorAll('.email-item').forEach(item => {
                 item.classList.remove('selected');
@@ -775,8 +790,86 @@
             element.classList.add('selected');
             selectedEmailId = emailId;
             
+            // Show email preview in the form section
+            await showEmailPreview(emailData);
+            
             // Show response form
             document.getElementById('email-response-form').classList.remove('hidden');
+        }
+
+        async function showEmailPreview(emailData) {
+            try {
+                // Get full email content for preview
+                const response = await fetch(`/api/emails/${emailData.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const fullEmail = data.email;
+                    
+                    // Update the form with email preview
+                    const formElement = document.getElementById('email-response-form');
+                    
+                    // Add email preview section if it doesn't exist
+                    let previewSection = document.getElementById('email-preview-section');
+                    if (!previewSection) {
+                        previewSection = document.createElement('div');
+                        previewSection.id = 'email-preview-section';
+                        previewSection.style.cssText = 'background: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;';
+                        formElement.insertBefore(previewSection, formElement.firstChild);
+                    }
+                    
+                    // Extract and clean email body
+                    let emailBody = fullEmail.body?.content || fullEmail.bodyPreview || 'No content available';
+                    
+                    // Simple HTML cleaning for preview (remove most tags but keep structure)
+                    if (emailBody.includes('<html') || emailBody.includes('<body')) {
+                        emailBody = emailBody
+                            .replace(/<script[^>]*>.*?<\/script>/gi, '')
+                            .replace(/<style[^>]*>.*?<\/style>/gi, '')
+                            .replace(/<[^>]*>/g, ' ')
+                            .replace(/\s+/g, ' ')
+                            .trim()
+                            .substring(0, 500) + (emailBody.length > 500 ? '...' : '');
+                    }
+                    
+                    previewSection.innerHTML = `
+                        <h4 style="margin: 0 0 0.5rem 0; color: #333;">📧 Email Preview</h4>
+                        <div style="margin-bottom: 0.5rem;"><strong>From:</strong> ${fullEmail.from?.emailAddress?.name || 'Unknown'} &lt;${fullEmail.from?.emailAddress?.address || 'unknown@email.com'}&gt;</div>
+                        <div style="margin-bottom: 0.5rem;"><strong>Subject:</strong> ${fullEmail.subject || 'No Subject'}</div>
+                        <div style="margin-bottom: 0.5rem;"><strong>Received:</strong> ${new Date(fullEmail.receivedDateTime).toLocaleString()}</div>
+                        <div style="background: white; padding: 0.75rem; border-radius: 4px; max-height: 150px; overflow-y: auto;">
+                            <strong>Content:</strong><br>
+                            ${emailBody}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading email preview:', error);
+            }
+        }
+
+        function cancelEmailResponse() {
+            // Hide all response-related elements
+            document.getElementById('email-response-form').classList.add('hidden');
+            document.getElementById('email-response-preview').classList.remove('active');
+            
+            // Clear selections
+            document.querySelectorAll('.email-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Reset variables
+            selectedEmailId = null;
+            generatedResponse = null;
+            
+            // Clear form fields
+            document.getElementById('response-context').value = '';
+            document.getElementById('response-tone').value = 'professional';
+            
+            // Remove email preview section if it exists
+            const previewSection = document.getElementById('email-preview-section');
+            if (previewSection) {
+                previewSection.remove();
+            }
         }
 
         async function generateEmailResponse() {
