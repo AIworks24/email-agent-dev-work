@@ -8,6 +8,9 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
 const session = require('express-session');
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-session-secret',
@@ -105,13 +108,24 @@ app.get('/auth/callback', async (req, res) => {
 
         const response = await pca.acquireTokenByCode(tokenRequest);
         
-        // Store token and user info in session
-        req.session.accessToken = response.accessToken;
-        req.session.user = {
+        // Store auth data in cookies instead of session
+        const userData = {
             id: response.account.homeAccountId,
             username: response.account.username,
             name: response.account.name
         };
+        
+        res.cookie('accessToken', response.accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+        
+        res.cookie('userData', JSON.stringify(userData), {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
         
         console.log(`✅ User authenticated: ${response.account.username}`);
         res.redirect('/dashboard');
@@ -126,14 +140,22 @@ app.get('/auth/callback', async (req, res) => {
 });
 
 app.get('/auth/user', (req, res) => {
-    if (!req.session.user) {
+    const userData = req.cookies.userData;
+    const accessToken = req.cookies.accessToken;
+    
+    if (!userData || !accessToken) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
     
-    res.json({
-        user: req.session.user,
-        authenticated: true
-    });
+    try {
+        const user = JSON.parse(userData);
+        res.json({
+            user: user,
+            authenticated: true
+        });
+    } catch (error) {
+        res.status(401).json({ error: 'Invalid user data' });
+    }
 });
 
 app.get('/auth/debug', (req, res) => {
