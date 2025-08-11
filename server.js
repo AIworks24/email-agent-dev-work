@@ -24,6 +24,10 @@ app.get('/auth/login', (req, res) => {
     });
 });
 
+app.get('/test', (req, res) => {
+    res.send('TEST ROUTE WORKS!');
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
