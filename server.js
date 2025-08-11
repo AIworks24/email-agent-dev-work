@@ -115,8 +115,13 @@ app.get('/auth/callback', async (req, res) => {
             name: response.account.name
         };
         
-        console.log(`✅ User authenticated: ${response.account.username}`);
-        res.redirect('/dashboard');
+        // Debug: show session info instead of redirecting
+        res.json({
+            message: 'Authentication successful!',
+            hasToken: !!req.session.accessToken,
+            user: req.session.user,
+            sessionId: req.sessionID
+        });
         
     } catch (error) {
         console.error('Token exchange error:', error);
