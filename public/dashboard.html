@@ -202,10 +202,13 @@
             background: #c82333;
         }
 
+        /* Enhanced Mobile Responsiveness */
         @media (max-width: 768px) {
             .container {
                 grid-template-columns: 1fr;
                 padding: 0 1rem;
+                margin: 1rem auto;
+                gap: 1rem;
             }
             
             .header {
@@ -216,6 +219,105 @@
             
             .query-input {
                 flex-direction: column;
+            }
+            
+            .card {
+                padding: 1rem;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .quick-action {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+            
+            .stat {
+                padding: 0.75rem;
+            }
+            
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            
+            input[type="text"] {
+                padding: 14px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            .btn {
+                padding: 14px 20px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            .response-area {
+                min-height: 120px;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 0.5rem auto;
+                padding: 0 0.5rem;
+            }
+            
+            .header {
+                padding: 0.75rem;
+            }
+            
+            .logo {
+                font-size: 1.2rem;
+            }
+            
+            .user-info {
+                font-size: 0.9rem;
+            }
+            
+            .card h2 {
+                font-size: 1.3rem;
+                margin-bottom: 0.75rem;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .stat-value {
+                font-size: 1.2rem;
+            }
+            
+            .stat-label {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Touch-friendly improvements */
+        .btn, .quick-action {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* Better textarea for mobile */
+        .response-area {
+            -webkit-overflow-scrolling: touch;
+            resize: none;
+        }
+        
+        /* iOS safe area support */
+        @supports (padding: max(0px)) {
+            .container {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
             }
         }
     </style>
