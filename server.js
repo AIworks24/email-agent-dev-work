@@ -323,15 +323,95 @@ Provide a helpful response to the user's query. Be specific and actionable.`
     }
 });
 
-app.get('/api/debug/graph', async (req, res) => {
+app.get('/api/emails/summary/daily', async (req, res) => {
     const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
     
-    res.json({
-        hasAccessToken: !!accessToken,
-        tokenLength: accessToken ? accessToken.length : 0,
-        tokenStart: accessToken ? accessToken.substring(0, 20) + '...' : 'No token'
-    });
+    try {
+        const { Client } = require('@microsoft/microsoft-graph-client');
+        const axios = require('axios');
+        
+        const graphClient = Client.init({
+            authProvider: {
+                getAccessToken: async () => accessToken
+            }
+        });
+        
+        const { days = 1 } = req.query;
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - parseInt(days));
+        
+        const emails = await graphClient
+            .api('/me/messages')
+            .filter(`receivedDateTime ge ${startDate.toISOString()}`)
+            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
+            .orderby('receivedDateTime desc')
+            .top(20)
+            .get();
+
+        // Create summary using Claude AI
+        const emailSummary = emails.value.map((email, index) => {
+            const from = email.from?.emailAddress?.address || 'Unknown sender';
+            const name = email.from?.emailAddress?.name || '';
+            const date = new Date(email.receivedDateTime).toLocaleDateString();
+            const preview = email.bodyPreview?.substring(0, 100) || 'No preview';
+            
+            return `${index + 1}. From: ${name} <${from}>
+   Subject: ${email.subject}
+   Date: ${date}
+   Read: ${email.isRead ? 'Yes' : 'No'}
+   Preview: ${preview}...`;
+        }).join('\n\n');
+
+        const summaryQuery = `Provide a summary of these emails including:
+        1. Total number of emails
+        2. Number of unread emails
+        3. Most important emails (by sender or content)
+        4. Any action items or follow-ups needed
+        5. Quick overview of main topics/themes`;
+
+        const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1500,
+            messages: [
+                { 
+                    role: 'user', 
+                    content: `${summaryQuery}
+
+Recent Email Data:
+${emailSummary}
+
+Provide a helpful summary of the user's emails. Be specific and actionable.`
+                }
+            ]
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            }
+        });
+        
+        res.json({
+            success: true,
+            period: `${days} day(s)`,
+            totalEmails: emails.value.length,
+            unreadEmails: emails.value.filter(e => !e.isRead).length,
+            summary: claudeResponse.data.content[0].text
+        });
+        
+    } catch (error) {
+        console.error('Error generating email summary:', error);
+        res.status(500).json({ 
+            error: 'Failed to generate email summary',
+            message: error.message,
+            details: error.response?.data || error.toString()
+        });
+    }
 });
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
