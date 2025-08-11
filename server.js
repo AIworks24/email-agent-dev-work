@@ -430,6 +430,281 @@ Provide a helpful response to the user's query. Be specific and actionable.`
     }
 });
 
+// Get specific email content for response generation
+app.get('/api/emails/:emailId', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { emailId } = req.params;
+        const graphClient = createGraphClient(accessToken);
+        
+        const email = await graphClient
+            .api(`/me/messages/${emailId}`)
+            .select('id,subject,from,to,receivedDateTime,body,replyTo')
+            .get();
+        
+        res.json({
+            success: true,
+            email: email
+        });
+    } catch (error) {
+        console.error('Error fetching email content:', error);
+        res.status(500).json({ error: 'Failed to fetch email content', message: error.message });
+    }
+});
+
+// Generate email response preview
+app.post('/api/emails/:emailId/respond', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { emailId } = req.params;
+        const { context = '', tone = 'professional' } = req.body;
+        
+        const graphClient = createGraphClient(accessToken);
+        const axios = require('axios');
+        
+        // Get original email content
+        const originalEmail = await graphClient
+            .api(`/me/messages/${emailId}`)
+            .select('id,subject,from,to,receivedDateTime,body,replyTo')
+            .get();
+        
+        // Generate response using Claude
+        const prompt = `Generate a ${tone} email response to the following email:
+
+Original Email:
+From: ${originalEmail.from?.emailAddress?.name} <${originalEmail.from?.emailAddress?.address}>
+Subject: ${originalEmail.subject}
+Content: ${originalEmail.body?.content || 'No content available'}
+
+Additional Context: ${context}
+
+Generate an appropriate response that:
+- Addresses the main points of the original email
+- Maintains a ${tone} tone
+- Is concise but complete
+- Includes a proper greeting and closing
+
+Return only the email content without subject line.`;
+
+        const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 800,
+            messages: [{ role: 'user', content: prompt }]
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            }
+        });
+        
+        res.json({
+            success: true,
+            originalSubject: originalEmail.subject,
+            originalFrom: originalEmail.from?.emailAddress?.name,
+            generatedResponse: claudeResponse.data.content[0].text,
+            suggestedSubject: `Re: ${originalEmail.subject}`,
+            emailId: emailId
+        });
+        
+    } catch (error) {
+        console.error('Error generating email response:', error);
+        res.status(500).json({ error: 'Failed to generate response', message: error.message });
+    }
+});
+
+// Send email response
+app.post('/api/emails/:emailId/send', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { emailId } = req.params;
+        const { responseContent, subject } = req.body;
+        
+        if (!responseContent) {
+            return res.status(400).json({ error: 'Response content is required' });
+        }
+        
+        const graphClient = createGraphClient(accessToken);
+        
+        // Get original email to get sender info
+        const originalEmail = await graphClient
+            .api(`/me/messages/${emailId}`)
+            .select('from,subject')
+            .get();
+        
+        const recipientEmail = originalEmail.from.emailAddress.address;
+        const responseSubject = subject || `Re: ${originalEmail.subject}`;
+        
+        // Send the response
+        const message = {
+            subject: responseSubject,
+            body: {
+                contentType: 'HTML',
+                content: responseContent
+            },
+            toRecipients: [{
+                emailAddress: {
+                    address: recipientEmail
+                }
+            }]
+        };
+
+        await graphClient
+            .api('/me/sendMail')
+            .post({ message });
+        
+        res.json({
+            success: true,
+            message: 'Email response sent successfully',
+            recipient: recipientEmail,
+            subject: responseSubject
+        });
+        
+    } catch (error) {
+        console.error('Error sending email response:', error);
+        res.status(500).json({ error: 'Failed to send email response', message: error.message });
+    }
+});
+
+// AI Calendar Analysis and Recommendations
+app.post('/api/calendar/analyze', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { query } = req.body;
+        const graphClient = createGraphClient(accessToken);
+        const axios = require('axios');
+        
+        // Get recent emails and calendar events for context
+        const [emails, events] = await Promise.all([
+            graphClient.api('/me/messages').top(20).select('id,subject,from,receivedDateTime,bodyPreview').get(),
+            graphClient.api('/me/events').filter(`start/dateTime ge '${new Date().toISOString()}'`).top(20).get()
+        ]);
+
+        const emailSummary = emails.value.map(email => 
+            `${email.subject} from ${email.from?.emailAddress?.name} - ${email.bodyPreview?.substring(0, 100)}`
+        ).join('\n');
+
+        const eventSummary = events.value.map(event => 
+            `${event.subject} - ${new Date(event.start.dateTime).toLocaleString()}`
+        ).join('\n');
+
+        const prompt = `You are an AI calendar assistant. Analyze the user's request and current schedule to provide recommendations.
+
+User Request: ${query}
+
+Recent Emails:
+${emailSummary}
+
+Upcoming Calendar Events:
+${eventSummary}
+
+Based on this information, provide:
+1. Analysis of current schedule and any conflicts
+2. Specific meeting recommendations with suggested times, attendees, and agenda
+3. For each recommendation, provide a JSON object with: title, suggestedTime, duration, attendees, agenda
+
+Format your response as recommendations followed by a JSON array of meeting suggestions.`;
+
+        const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1500,
+            messages: [{ role: 'user', content: prompt }]
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            }
+        });
+
+        res.json({
+            success: true,
+            analysis: claudeResponse.data.content[0].text,
+            emailCount: emails.value.length,
+            eventCount: events.value.length
+        });
+        
+    } catch (error) {
+        console.error('Error analyzing calendar:', error);
+        res.status(500).json({ error: 'Failed to analyze calendar', message: error.message });
+    }
+});
+
+// Create calendar invite
+app.post('/api/calendar/create-invite', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { title, startTime, endTime, attendees, agenda, location } = req.body;
+        
+        if (!title || !startTime || !endTime) {
+            return res.status(400).json({ error: 'Title, start time, and end time are required' });
+        }
+        
+        const graphClient = createGraphClient(accessToken);
+        
+        const event = {
+            subject: title,
+            start: {
+                dateTime: startTime,
+                timeZone: 'UTC'
+            },
+            end: {
+                dateTime: endTime,
+                timeZone: 'UTC'
+            },
+            body: {
+                contentType: 'HTML',
+                content: agenda || 'Meeting agenda to be determined.'
+            },
+            location: location ? {
+                displayName: location
+            } : undefined,
+            attendees: attendees ? attendees.map(email => ({
+                emailAddress: {
+                    address: email,
+                    name: email
+                },
+                type: 'required'
+            })) : []
+        };
+
+        const createdEvent = await graphClient
+            .api('/me/events')
+            .post(event);
+        
+        res.json({
+            success: true,
+            message: 'Calendar invite created successfully',
+            eventId: createdEvent.id,
+            event: createdEvent
+        });
+        
+    } catch (error) {
+        console.error('Error creating calendar invite:', error);
+        res.status(500).json({ error: 'Failed to create calendar invite', message: error.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 AI Email Agent running on port ${PORT}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
