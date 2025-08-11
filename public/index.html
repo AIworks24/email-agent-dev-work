@@ -108,10 +108,72 @@
             100% { opacity: 1; }
         }
         
-        @media (max-width: 768px) {
-            h1 { font-size: 2rem; }
-            .subtitle { font-size: 1rem; }
-            .container { padding: 1rem; }
+        /* Enhanced Mobile Responsiveness */
+        @media (max-width: 768px) { 
+            h1 { 
+                font-size: 2rem; 
+            }
+            .subtitle { 
+                font-size: 1rem; 
+            }
+            .container { 
+                padding: 1rem; 
+                margin: 1rem;
+            }
+            .features {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .feature {
+                padding: 1.25rem;
+            }
+            .cta-button {
+                padding: 16px 24px;
+                font-size: 1rem;
+                margin-top: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+            h1 {
+                font-size: 1.75rem;
+            }
+            .subtitle {
+                font-size: 0.95rem;
+                line-height: 1.5;
+            }
+            .container {
+                padding: 0.75rem;
+                margin: 0.5rem;
+            }
+            .feature {
+                padding: 1rem;
+            }
+            .feature h3 {
+                font-size: 1rem;
+            }
+            .cta-button {
+                padding: 14px 20px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+        }
+
+        /* Touch improvements */
+        .cta-button {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* iOS safe area support */
+        @supports (padding: max(0px)) {
+            .container {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+                padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            }
         }
     </style>
 </head>
