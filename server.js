@@ -158,7 +158,6 @@ app.get('/auth/user', (req, res) => {
     }
 });
 
-// Email API routes with real Microsoft Graph
 app.get('/api/emails', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -174,16 +173,9 @@ app.get('/api/emails', async (req, res) => {
             }
         });
         
-        const { days = 1 } = req.query;
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        
         const emails = await graphClient
             .api('/me/messages')
-            .filter(`receivedDateTime ge ${startDate.toISOString()}`)
-            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance,hasAttachments')
-            .orderby('receivedDateTime desc')
-            .top(50)
+            .top(5)
             .get();
         
         res.json({
@@ -192,8 +184,12 @@ app.get('/api/emails', async (req, res) => {
             emails: emails.value
         });
     } catch (error) {
-        console.error('Error fetching emails:', error);
-        res.status(500).json({ error: 'Failed to fetch emails', message: error.message });
+        console.error('Detailed error:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch emails', 
+            message: error.message,
+            details: error.response?.data || error.stack
+        });
     }
 });
 
@@ -327,6 +323,15 @@ Provide a helpful response to the user's query. Be specific and actionable.`
     }
 });
 
+app.get('/api/debug/graph', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    
+    res.json({
+        hasAccessToken: !!accessToken,
+        tokenLength: accessToken ? accessToken.length : 0,
+        tokenStart: accessToken ? accessToken.substring(0, 20) + '...' : 'No token'
+    });
+});
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
