@@ -1,27 +1,40 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
-const session = require('express-session');
+// Session middleware
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-session-secret',
     resave: true,
     saveUninitialized: true,
     cookie: { 
         secure: false,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
+// Helper function to create Graph client
+function createGraphClient(accessToken) {
+    const { Client } = require('@microsoft/microsoft-graph-client');
+    return Client.init({
+        authProvider: {
+            getAccessToken: async () => accessToken
+        }
+    });
+}
+
+// Basic routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/index.html'));
 });
@@ -31,13 +44,16 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/dashboard', (req, res) => {
-    // For now, let's not check auth and just serve the dashboard
     res.sendFile(path.join(__dirname, 'public/dashboard.html'));
 });
 
+app.get('/test', (req, res) => {
+    res.send('TEST ROUTE WORKS!');
+});
+
+// Auth routes
 app.get('/auth/login', async (req, res) => {
     try {
-        // For now, let's test if we can load the MSAL library
         const { ConfidentialClientApplication } = require('@azure/msal-node');
         
         const msalConfig = {
@@ -108,7 +124,6 @@ app.get('/auth/callback', async (req, res) => {
 
         const response = await pca.acquireTokenByCode(tokenRequest);
         
-        // Store auth data in cookies instead of session
         const userData = {
             id: response.account.homeAccountId,
             username: response.account.username,
@@ -118,13 +133,13 @@ app.get('/auth/callback', async (req, res) => {
         res.cookie('accessToken', response.accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000
         });
         
         res.cookie('userData', JSON.stringify(userData), {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000
         });
         
         console.log(`✅ User authenticated: ${response.account.username}`);
@@ -158,6 +173,28 @@ app.get('/auth/user', (req, res) => {
     }
 });
 
+app.get('/auth/debug', (req, res) => {
+    res.json({
+        hasSession: !!req.session,
+        sessionId: req.sessionID,
+        hasAccessToken: !!req.session?.accessToken,
+        hasUser: !!req.session?.user,
+        user: req.session?.user,
+        cookies: req.headers.cookie
+    });
+});
+
+app.get('/api/debug/graph', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    
+    res.json({
+        hasAccessToken: !!accessToken,
+        tokenLength: accessToken ? accessToken.length : 0,
+        tokenStart: accessToken ? accessToken.substring(0, 20) + '...' : 'No token'
+    });
+});
+
+// API Routes
 app.get('/api/emails', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -184,7 +221,6 @@ app.get('/api/emails', async (req, res) => {
     }
 });
 
-// Calendar Overview API - gets calendar counts  
 app.get('/api/calendar/events', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -216,7 +252,6 @@ app.get('/api/calendar/events', async (req, res) => {
     }
 });
 
-// Today's calendar
 app.get('/api/calendar/today', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -248,83 +283,6 @@ app.get('/api/calendar/today', async (req, res) => {
     }
 });
 
-// AI Email Query with real data
-// AI Query endpoint with Claude
-app.post('/api/emails/query', async (req, res) => {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    try {
-        const { query } = req.body;
-        if (!query) {
-            return res.status(400).json({ error: 'Query is required' });
-        }
-
-        const graphClient = createGraphClient(accessToken);
-        const axios = require('axios');
-        
-        // Get real email data
-        const emails = await graphClient
-            .api('/me/messages')
-            .top(20)
-            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
-            .get();
-
-        // Format emails for Claude
-        const emailSummary = emails.value.map((email, index) => {
-            const from = email.from?.emailAddress?.address || 'Unknown sender';
-            const name = email.from?.emailAddress?.name || '';
-            const date = new Date(email.receivedDateTime).toLocaleDateString();
-            const preview = email.bodyPreview?.substring(0, 100) || 'No preview';
-            
-            return `${index + 1}. From: ${name} <${from}>
-   Subject: ${email.subject}
-   Date: ${date}
-   Read: ${email.isRead ? 'Yes' : 'No'}
-   Preview: ${preview}...`;
-        }).join('\n\n');
-
-        // Send to Claude AI
-        const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1500,
-            messages: [
-                { 
-                    role: 'user', 
-                    content: `You are an AI assistant helping to manage Microsoft 365 emails. Provide helpful, concise responses.
-
-User Query: ${query}
-
-Recent Email Data:
-${emailSummary}
-
-Provide a helpful response to the user's query. Be specific and actionable.`
-                }
-            ]
-        }, {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': process.env.ANTHROPIC_API_KEY,
-                'anthropic-version': '2023-06-01'
-            }
-        });
-
-        res.json({
-            success: true,
-            query: query,
-            response: claudeResponse.data.content[0].text,
-            emailCount: emails.value.length
-        });
-        
-    } catch (error) {
-        console.error('Error processing query:', error);
-        res.status(500).json({ error: 'Failed to process query', message: error.message });
-    }
-});
-
-// Email summary with Claude
 app.get('/api/emails/summary/daily', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -341,7 +299,6 @@ app.get('/api/emails/summary/daily', async (req, res) => {
             .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
             .get();
 
-        // Format for Claude
         const emailSummary = emails.value.map((email, index) => {
             const from = email.from?.emailAddress?.address || 'Unknown sender';
             const name = email.from?.emailAddress?.name || '';
@@ -398,8 +355,80 @@ Provide a helpful summary of the user's emails. Be specific and actionable.`
     }
 });
 
+app.post('/api/emails/query', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { query } = req.body;
+        if (!query) {
+            return res.status(400).json({ error: 'Query is required' });
+        }
+
+        const graphClient = createGraphClient(accessToken);
+        const axios = require('axios');
+        
+        const emails = await graphClient
+            .api('/me/messages')
+            .top(20)
+            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
+            .get();
+
+        const emailSummary = emails.value.map((email, index) => {
+            const from = email.from?.emailAddress?.address || 'Unknown sender';
+            const name = email.from?.emailAddress?.name || '';
+            const date = new Date(email.receivedDateTime).toLocaleDateString();
+            const preview = email.bodyPreview?.substring(0, 100) || 'No preview';
+            
+            return `${index + 1}. From: ${name} <${from}>
+   Subject: ${email.subject}
+   Date: ${date}
+   Read: ${email.isRead ? 'Yes' : 'No'}
+   Preview: ${preview}...`;
+        }).join('\n\n');
+
+        const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1500,
+            messages: [
+                { 
+                    role: 'user', 
+                    content: `You are an AI assistant helping to manage Microsoft 365 emails. Provide helpful, concise responses.
+
+User Query: ${query}
+
+Recent Email Data:
+${emailSummary}
+
+Provide a helpful response to the user's query. Be specific and actionable.`
+                }
+            ]
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            }
+        });
+
+        res.json({
+            success: true,
+            query: query,
+            response: claudeResponse.data.content[0].text,
+            emailCount: emails.value.length
+        });
+        
+    } catch (error) {
+        console.error('Error processing query:', error);
+        res.status(500).json({ error: 'Failed to process query', message: error.message });
+    }
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 AI Email Agent running on port ${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;
