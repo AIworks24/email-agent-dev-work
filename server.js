@@ -24,13 +24,17 @@ app.use(session({
     }
 }));
 
-// Helper function to create Graph client
 function createGraphClient(accessToken) {
     const { Client } = require('@microsoft/microsoft-graph-client');
-    return Client.init({
-        authProvider: {
-            getAccessToken: async () => accessToken
+    
+    const authProvider = {
+        getAccessToken: async () => {
+            return accessToken;
         }
+    };
+    
+    return Client.initWithMiddleware({
+        authProvider: authProvider
     });
 }
 
