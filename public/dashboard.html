@@ -41,7 +41,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 2rem auto;
             padding: 0 2rem;
             display: grid;
@@ -67,13 +67,18 @@
             grid-column: 1 / -1;
         }
 
-        .query-input {
+        .email-response-section, .calendar-analysis-section {
+            grid-column: 1 / -1;
+            margin-top: 1rem;
+        }
+
+        .query-input, .email-input, .calendar-input {
             display: flex;
             gap: 1rem;
             margin-bottom: 1rem;
         }
 
-        input[type="text"] {
+        input[type="text"], input[type="email"], select, textarea {
             flex: 1;
             padding: 12px;
             border: 2px solid #e1e5e9;
@@ -81,9 +86,14 @@
             font-size: 1rem;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus, input[type="email"]:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
         }
 
         .btn {
@@ -115,6 +125,15 @@
             background: #5a6268;
         }
 
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
         .response-area {
             background: #f8f9fa;
             border: 1px solid #e1e5e9;
@@ -123,6 +142,28 @@
             min-height: 150px;
             white-space: pre-wrap;
             font-family: inherit;
+            margin-bottom: 1rem;
+        }
+
+        .email-response-preview {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .email-response-preview.active {
+            display: block;
+        }
+
+        .email-meta {
+            background: #e9ecef;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
         }
 
         .quick-actions {
@@ -187,6 +228,14 @@
             margin: 1rem 0;
         }
 
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
         .logout-btn {
             background: #dc3545;
             color: white;
@@ -200,6 +249,67 @@
 
         .logout-btn:hover {
             background: #c82333;
+        }
+
+        .email-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .email-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e1e5e9;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .email-item:hover {
+            background: #f8f9fa;
+        }
+
+        .email-item.selected {
+            background: #e3f2fd;
+            border-left: 4px solid #667eea;
+        }
+
+        .email-subject {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .email-from {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+
+        .email-preview {
+            font-size: 0.85rem;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .hidden {
+            display: none;
         }
 
         /* Enhanced Mobile Responsiveness */
@@ -217,8 +327,12 @@
                 gap: 1rem;
             }
             
-            .query-input {
+            .query-input, .email-input, .calendar-input {
                 flex-direction: column;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
             }
             
             .card {
@@ -230,38 +344,19 @@
                 gap: 0.5rem;
             }
             
-            .quick-action {
-                padding: 1rem;
-                font-size: 0.9rem;
-            }
-            
             .stats {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 0.5rem;
             }
             
-            .stat {
-                padding: 0.75rem;
-            }
-            
-            .stat-value {
-                font-size: 1.5rem;
-            }
-            
-            input[type="text"] {
+            input[type="text"], input[type="email"], select, textarea {
                 padding: 14px;
-                font-size: 16px; /* Prevents zoom on iOS */
+                font-size: 16px;
             }
             
             .btn {
                 padding: 14px 20px;
-                font-size: 16px; /* Prevents zoom on iOS */
-            }
-            
-            .response-area {
-                min-height: 120px;
-                font-size: 14px;
-                line-height: 1.4;
+                font-size: 16px;
             }
         }
 
@@ -279,45 +374,8 @@
                 font-size: 1.2rem;
             }
             
-            .user-info {
-                font-size: 0.9rem;
-            }
-            
-            .card h2 {
-                font-size: 1.3rem;
-                margin-bottom: 0.75rem;
-            }
-            
             .stats {
                 grid-template-columns: 1fr 1fr;
-            }
-            
-            .stat-value {
-                font-size: 1.2rem;
-            }
-            
-            .stat-label {
-                font-size: 0.8rem;
-            }
-        }
-
-        /* Touch-friendly improvements */
-        .btn, .quick-action {
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-        
-        /* Better textarea for mobile */
-        .response-area {
-            -webkit-overflow-scrolling: touch;
-            resize: none;
-        }
-        
-        /* iOS safe area support */
-        @supports (padding: max(0px)) {
-            .container {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
             }
         }
     </style>
@@ -334,6 +392,7 @@
     </div>
 
     <div class="container">
+        <!-- AI Query Section -->
         <div class="card query-section">
             <h2>Ask Your Email Assistant</h2>
             <div class="query-input">
@@ -364,6 +423,7 @@
             </div>
         </div>
 
+        <!-- Email Overview -->
         <div class="card">
             <h2>Email Overview</h2>
             <div class="stats" id="email-stats">
@@ -381,6 +441,7 @@
             </button>
         </div>
 
+        <!-- Calendar Overview -->
         <div class="card">
             <h2>Calendar Overview</h2>
             <div class="stats" id="calendar-stats">
@@ -397,10 +458,124 @@
                 View Today's Schedule
             </button>
         </div>
+
+        <!-- AI Email Response Section -->
+        <div class="card email-response-section">
+            <h2>🤖 AI Email Response Generator</h2>
+            <p style="margin-bottom: 1rem; color: #6c757d;">Select an email below to generate an AI-powered response</p>
+            
+            <button class="btn btn-primary" onclick="loadEmails()" style="margin-bottom: 1rem;">
+                Load Recent Emails
+            </button>
+            
+            <div id="email-list" class="email-list" style="display: none;"></div>
+            
+            <div id="email-response-form" class="hidden">
+                <div class="form-group">
+                    <label for="response-context">Additional Context (optional):</label>
+                    <textarea id="response-context" placeholder="Any additional context or specific points you want to address..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="response-tone">Response Tone:</label>
+                    <select id="response-tone">
+                        <option value="professional">Professional</option>
+                        <option value="friendly">Friendly</option>
+                        <option value="formal">Formal</option>
+                        <option value="casual">Casual</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" onclick="generateEmailResponse()">
+                    Generate AI Response
+                </button>
+            </div>
+            
+            <div id="email-response-preview" class="email-response-preview">
+                <div class="email-meta" id="response-meta"></div>
+                <div id="response-content"></div>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-success" onclick="sendEmailResponse()">
+                        Send Response
+                    </button>
+                    <button class="btn btn-secondary" onclick="editResponse()" style="margin-left: 0.5rem;">
+                        Edit Response
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Calendar Analysis Section -->
+        <div class="card calendar-analysis-section">
+            <h2>📅 AI Calendar Analysis & Booking</h2>
+            <p style="margin-bottom: 1rem; color: #6c757d;">Get AI recommendations for scheduling and calendar optimization</p>
+            
+            <div class="calendar-input">
+                <input type="text" id="calendar-query" placeholder="e.g., 'Schedule a team meeting next week' or 'Analyze my schedule for conflicts'" />
+                <button class="btn btn-primary" onclick="analyzeCalendar()">Analyze</button>
+            </div>
+            
+            <div class="response-area" id="calendar-response"></div>
+            
+            <div id="meeting-form" class="hidden">
+                <h3 style="margin: 1rem 0;">Create Meeting Invite</h3>
+                <div class="form-group">
+                    <label for="meeting-title">Meeting Title:</label>
+                    <input type="text" id="meeting-title" placeholder="Meeting subject">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="meeting-start">Start Time:</label>
+                        <input type="datetime-local" id="meeting-start">
+                    </div>
+                    <div class="form-group">
+                        <label for="meeting-end">End Time:</label>
+                        <input type="datetime-local" id="meeting-end">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="meeting-attendees">Attendees (comma-separated emails):</label>
+                    <input type="text" id="meeting-attendees" placeholder="email1@company.com, email2@company.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="meeting-location">Location (optional):</label>
+                    <input type="text" id="meeting-location" placeholder="Conference Room A or Teams Meeting">
+                </div>
+                
+                <div class="form-group">
+                    <label for="meeting-agenda">Agenda:</label>
+                    <textarea id="meeting-agenda" placeholder="Meeting agenda and objectives..."></textarea>
+                </div>
+                
+                <button class="btn btn-success" onclick="createMeetingInvite()">
+                    Create Meeting Invite
+                </button>
+            </div>
+            
+            <div class="quick-actions">
+                <button class="quick-action" onclick="quickCalendarQuery('Analyze my schedule for conflicts this week')">
+                    🔍 Find Conflicts
+                </button>
+                <button class="quick-action" onclick="quickCalendarQuery('Best time for a 1-hour team meeting next week')">
+                    📅 Schedule Team Meeting
+                </button>
+                <button class="quick-action" onclick="quickCalendarQuery('Show me my availability for client calls')">
+                    📞 Client Call Availability
+                </button>
+                <button class="quick-action" onclick="showMeetingForm()">
+                    ➕ Create Meeting
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
         let currentUser = null;
+        let selectedEmailId = null;
+        let generatedResponse = null;
 
         // Load user info and initial data
         window.onload = function() {
@@ -453,7 +628,6 @@
                     document.getElementById('today-meetings').textContent = '0';
                 }
 
-                // Load week stats
                 const weekResponse = await fetch('/api/calendar/events?days=7');
                 if (weekResponse.ok) {
                     const weekData = await weekResponse.json();
@@ -546,10 +720,270 @@
             }
         }
 
-        // Handle Enter key in query input
+        // Email Response Functions
+        async function loadEmails() {
+            try {
+                const response = await fetch('/api/emails?days=3');
+                if (response.ok) {
+                    const data = await response.json();
+                    displayEmailList(data.emails);
+                } else {
+                    throw new Error('Failed to fetch emails');
+                }
+            } catch (error) {
+                console.error('Error loading emails:', error);
+                alert('Failed to load emails');
+            }
+        }
+
+        function displayEmailList(emails) {
+            const emailList = document.getElementById('email-list');
+            emailList.innerHTML = '';
+            
+            emails.forEach(email => {
+                const emailItem = document.createElement('div');
+                emailItem.className = 'email-item';
+                emailItem.onclick = () => selectEmail(email.id, emailItem);
+                
+                emailItem.innerHTML = `
+                    <div class="email-subject">${email.subject}</div>
+                    <div class="email-from">From: ${email.from?.emailAddress?.name || email.from?.emailAddress?.address}</div>
+                    <div class="email-preview">${email.bodyPreview || 'No preview available'}</div>
+                `;
+                
+                emailList.appendChild(emailItem);
+            });
+            
+            emailList.style.display = 'block';
+        }
+
+        function selectEmail(emailId, element) {
+            // Remove previous selection
+            document.querySelectorAll('.email-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select current email
+            element.classList.add('selected');
+            selectedEmailId = emailId;
+            
+            // Show response form
+            document.getElementById('email-response-form').classList.remove('hidden');
+        }
+
+        async function generateEmailResponse() {
+            if (!selectedEmailId) {
+                alert('Please select an email first');
+                return;
+            }
+            
+            const context = document.getElementById('response-context').value;
+            const tone = document.getElementById('response-tone').value;
+            
+            try {
+                const response = await fetch(`/api/emails/${selectedEmailId}/respond`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ context, tone })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showEmailResponsePreview(data);
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.message || 'Failed to generate response'}`);
+                }
+            } catch (error) {
+                console.error('Error generating response:', error);
+                alert('Failed to generate email response');
+            }
+        }
+
+        function showEmailResponsePreview(data) {
+            generatedResponse = data;
+            
+            document.getElementById('response-meta').innerHTML = `
+                <strong>To:</strong> ${data.originalFrom}<br>
+                <strong>Subject:</strong> ${data.suggestedSubject}
+            `;
+            
+            document.getElementById('response-content').innerHTML = `
+                <h4>Generated Response:</h4>
+                <div style="white-space: pre-wrap; background: white; padding: 1rem; border-radius: 4px; margin-top: 0.5rem;">${data.generatedResponse}</div>
+            `;
+            
+            document.getElementById('email-response-preview').classList.add('active');
+        }
+
+        async function sendEmailResponse() {
+            if (!generatedResponse) {
+                alert('No response to send');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/emails/${selectedEmailId}/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        responseContent: generatedResponse.generatedResponse,
+                        subject: generatedResponse.suggestedSubject
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('Email sent successfully!');
+                    document.getElementById('email-response-preview').classList.remove('active');
+                    document.getElementById('email-response-form').classList.add('hidden');
+                    selectedEmailId = null;
+                    generatedResponse = null;
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.message || 'Failed to send email'}`);
+                }
+            } catch (error) {
+                console.error('Error sending email:', error);
+                alert('Failed to send email');
+            }
+        }
+
+        function editResponse() {
+            // Allow user to edit the response (could open a modal or make the content editable)
+            const content = document.getElementById('response-content');
+            const responseText = generatedResponse.generatedResponse;
+            
+            content.innerHTML = `
+                <h4>Edit Response:</h4>
+                <textarea id="edit-response-text" style="width: 100%; min-height: 200px; margin-top: 0.5rem;">${responseText}</textarea>
+                <button class="btn btn-primary" onclick="updateResponse()" style="margin-top: 0.5rem;">Update Response</button>
+            `;
+        }
+
+        function updateResponse() {
+            const newText = document.getElementById('edit-response-text').value;
+            generatedResponse.generatedResponse = newText;
+            showEmailResponsePreview(generatedResponse);
+        }
+
+        // Calendar Analysis Functions
+        async function analyzeCalendar() {
+            const query = document.getElementById('calendar-query').value.trim();
+            if (!query) {
+                alert('Please enter a calendar query');
+                return;
+            }
+
+            const responseArea = document.getElementById('calendar-response');
+            responseArea.textContent = 'Analyzing your calendar...';
+
+            try {
+                const response = await fetch('/api/calendar/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    responseArea.textContent = data.analysis;
+                } else {
+                    const errorData = await response.json();
+                    responseArea.textContent = `Error: ${errorData.message || 'Failed to analyze calendar'}`;
+                }
+            } catch (error) {
+                console.error('Error analyzing calendar:', error);
+                responseArea.textContent = 'Error: Failed to analyze calendar';
+            }
+        }
+
+        function quickCalendarQuery(query) {
+            document.getElementById('calendar-query').value = query;
+            analyzeCalendar();
+        }
+
+        function showMeetingForm() {
+            document.getElementById('meeting-form').classList.remove('hidden');
+            
+            // Set default times (1 hour from now)
+            const now = new Date();
+            const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+            
+            document.getElementById('meeting-start').value = now.toISOString().slice(0, 16);
+            document.getElementById('meeting-end').value = oneHourLater.toISOString().slice(0, 16);
+        }
+
+        async function createMeetingInvite() {
+            const title = document.getElementById('meeting-title').value.trim();
+            const startTime = document.getElementById('meeting-start').value;
+            const endTime = document.getElementById('meeting-end').value;
+            const attendeesStr = document.getElementById('meeting-attendees').value.trim();
+            const location = document.getElementById('meeting-location').value.trim();
+            const agenda = document.getElementById('meeting-agenda').value.trim();
+            
+            if (!title || !startTime || !endTime) {
+                alert('Please fill in the required fields (title, start time, end time)');
+                return;
+            }
+            
+            const attendees = attendeesStr ? attendeesStr.split(',').map(email => email.trim()).filter(email => email) : [];
+            
+            try {
+                const response = await fetch('/api/calendar/create-invite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title,
+                        startTime: new Date(startTime).toISOString(),
+                        endTime: new Date(endTime).toISOString(),
+                        attendees,
+                        location,
+                        agenda
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('Meeting invite created successfully!');
+                    
+                    // Clear form
+                    document.getElementById('meeting-title').value = '';
+                    document.getElementById('meeting-attendees').value = '';
+                    document.getElementById('meeting-location').value = '';
+                    document.getElementById('meeting-agenda').value = '';
+                    document.getElementById('meeting-form').classList.add('hidden');
+                    
+                    // Refresh calendar stats
+                    loadCalendarStats();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.message || 'Failed to create meeting invite'}`);
+                }
+            } catch (error) {
+                console.error('Error creating meeting invite:', error);
+                alert('Failed to create meeting invite');
+            }
+        }
+
+        // Handle Enter key in query inputs
         document.getElementById('query').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 processQuery();
+            }
+        });
+        
+        document.getElementById('calendar-query').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyzeCalendar();
             }
         });
     </script>
