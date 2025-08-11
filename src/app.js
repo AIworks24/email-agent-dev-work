@@ -28,16 +28,7 @@ app.use(session({
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Routes
-const authRoutes = require('./routes/auth');
-const emailRoutes = require('./routes/emails');
-const calendarRoutes = require('./routes/calendar');
-
-app.use('/auth', authRoutes);
-app.use('/api/emails', emailRoutes);
-app.use('/api/calendar', calendarRoutes);
-
-// Basic routes
+// Basic routes first
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -56,6 +47,26 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         version: '1.0.0'
     });
+});
+
+// Auth routes - inline to avoid import issues
+app.get('/auth/login', (req, res) => {
+    res.json({ 
+        message: 'Login endpoint working',
+        redirectUri: process.env.REDIRECT_URI,
+        hasClientId: !!process.env.AZURE_CLIENT_ID 
+    });
+});
+
+app.get('/auth/callback', (req, res) => {
+    res.json({ message: 'Callback endpoint working' });
+});
+
+app.get('/auth/user', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    res.json({ user: req.session.user, authenticated: true });
 });
 
 // Error handling middleware
