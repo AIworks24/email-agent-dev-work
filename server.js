@@ -28,6 +28,9 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/dashboard', (req, res) => {
+    if (!req.session.accessToken) {
+        return res.redirect('/auth/login');
+    }
     res.sendFile(path.join(__dirname, 'public/dashboard.html'));
 });
 
@@ -104,9 +107,16 @@ app.get('/auth/callback', async (req, res) => {
 
         const response = await pca.acquireTokenByCode(tokenRequest);
         
-        // Store token in session (we'll need to add session middleware)
-        // For now, just redirect to dashboard with success
-        res.redirect('/dashboard?auth=success');
+        // Store token and user info in session
+        req.session.accessToken = response.accessToken;
+        req.session.user = {
+            id: response.account.homeAccountId,
+            username: response.account.username,
+            name: response.account.name
+        };
+        
+        console.log(`✅ User authenticated: ${response.account.username}`);
+        res.redirect('/dashboard');
         
     } catch (error) {
         console.error('Token exchange error:', error);
