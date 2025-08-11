@@ -125,6 +125,17 @@ app.get('/auth/callback', async (req, res) => {
     }
 });
 
+app.get('/auth/user', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    res.json({
+        user: req.session.user,
+        authenticated: true
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
