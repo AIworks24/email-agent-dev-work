@@ -1,3 +1,4 @@
+require('isomorphic-fetch');
 const { ConfidentialClientApplication } = require('@azure/msal-node');
 
 const msalConfig = {
