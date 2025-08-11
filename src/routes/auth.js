@@ -14,7 +14,7 @@ router.get('/login', async (req, res) => {
         res.redirect(response);
     } catch (error) {
         console.error('Error during login:', error);
-        res.status(500).json({ error: 'Authentication failed' });
+        res.status(500).json({ error: 'Authentication failed', details: error.message });
     }
 });
 
@@ -45,7 +45,7 @@ router.get('/callback', async (req, res) => {
         res.redirect('/dashboard');
     } catch (error) {
         console.error('Error during token acquisition:', error);
-        res.status(500).json({ error: 'Token acquisition failed' });
+        res.status(500).json({ error: 'Token acquisition failed', details: error.message });
     }
 });
 
@@ -58,17 +58,6 @@ router.get('/user', (req, res) => {
     res.json({
         user: req.session.user,
         authenticated: true
-    });
-});
-
-// Debug route to check environment variables
-router.get('/debug', (req, res) => {
-    res.json({
-        REDIRECT_URI: process.env.REDIRECT_URI,
-        NODE_ENV: process.env.NODE_ENV,
-        hasAzureClientId: !!process.env.AZURE_CLIENT_ID,
-        hasAzureSecret: !!process.env.AZURE_CLIENT_SECRET,
-        hasAzureTenant: !!process.env.AZURE_TENANT_ID
     });
 });
 
