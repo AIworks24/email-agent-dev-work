@@ -70,5 +70,15 @@ router.get('/logout', (req, res) => {
         res.redirect('/');
     });
 });
+// Debug route to check environment variables
+router.get('/debug', (req, res) => {
+    res.json({
+        REDIRECT_URI: process.env.REDIRECT_URI,
+        NODE_ENV: process.env.NODE_ENV,
+        hasAzureClientId: !!process.env.AZURE_CLIENT_ID,
+        hasAzureSecret: !!process.env.AZURE_CLIENT_SECRET,
+        hasAzureTenant: !!process.env.AZURE_TENANT_ID
+    });
+});
 
 module.exports = router;
