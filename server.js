@@ -430,7 +430,6 @@ Provide a helpful response to the user's query. Be specific and actionable.`
     }
 });
 
-// Get specific email content for response generation
 app.get('/api/emails/:emailId', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -443,7 +442,7 @@ app.get('/api/emails/:emailId', async (req, res) => {
         
         const email = await graphClient
             .api(`/me/messages/${emailId}`)
-            .select('id,subject,from,to,receivedDateTime,body,replyTo')
+            .select('id,subject,from,sender,receivedDateTime,body,bodyPreview,replyTo,toRecipients,ccRecipients,importance,hasAttachments')
             .get();
         
         res.json({
@@ -452,11 +451,14 @@ app.get('/api/emails/:emailId', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching email content:', error);
-        res.status(500).json({ error: 'Failed to fetch email content', message: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch email content', 
+            message: error.message,
+            details: error.response?.data || 'No additional details available'
+        });
     }
 });
 
-// Generate email response preview
 app.post('/api/emails/:emailId/respond', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -470,19 +472,27 @@ app.post('/api/emails/:emailId/respond', async (req, res) => {
         const graphClient = createGraphClient(accessToken);
         const axios = require('axios');
         
-        // Get original email content
+        // Get original email content with correct field selection
         const originalEmail = await graphClient
             .api(`/me/messages/${emailId}`)
-            .select('id,subject,from,to,receivedDateTime,body,replyTo')
+            .select('id,subject,from,receivedDateTime,body,bodyPreview,sender,replyTo,toRecipients')
             .get();
+        
+        console.log('Original email data:', JSON.stringify(originalEmail, null, 2)); // Debug log
+        
+        // Extract email content safely
+        const fromName = originalEmail.from?.emailAddress?.name || originalEmail.sender?.emailAddress?.name || 'Unknown Sender';
+        const fromEmail = originalEmail.from?.emailAddress?.address || originalEmail.sender?.emailAddress?.address || 'unknown@email.com';
+        const emailBody = originalEmail.body?.content || originalEmail.bodyPreview || 'No content available';
+        const subject = originalEmail.subject || 'No Subject';
         
         // Generate response using Claude
         const prompt = `Generate a ${tone} email response to the following email:
 
 Original Email:
-From: ${originalEmail.from?.emailAddress?.name} <${originalEmail.from?.emailAddress?.address}>
-Subject: ${originalEmail.subject}
-Content: ${originalEmail.body?.content || 'No content available'}
+From: ${fromName} <${fromEmail}>
+Subject: ${subject}
+Content: ${emailBody}
 
 Additional Context: ${context}
 
@@ -508,20 +518,30 @@ Return only the email content without subject line.`;
         
         res.json({
             success: true,
-            originalSubject: originalEmail.subject,
-            originalFrom: originalEmail.from?.emailAddress?.name,
+            originalSubject: subject,
+            originalFrom: fromName,
+            originalFromEmail: fromEmail,
             generatedResponse: claudeResponse.data.content[0].text,
-            suggestedSubject: `Re: ${originalEmail.subject}`,
+            suggestedSubject: `Re: ${subject}`,
             emailId: emailId
         });
         
     } catch (error) {
         console.error('Error generating email response:', error);
-        res.status(500).json({ error: 'Failed to generate response', message: error.message });
+        
+        // More detailed error logging
+        if (error.response && error.response.data) {
+            console.error('API Error Details:', error.response.data);
+        }
+        
+        res.status(500).json({ 
+            error: 'Failed to generate response', 
+            message: error.message,
+            details: error.response?.data || 'No additional details available'
+        });
     }
 });
 
-// Send email response
 app.post('/api/emails/:emailId/send', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -538,14 +558,21 @@ app.post('/api/emails/:emailId/send', async (req, res) => {
         
         const graphClient = createGraphClient(accessToken);
         
-        // Get original email to get sender info
+        // Get original email to get sender info with correct fields
         const originalEmail = await graphClient
             .api(`/me/messages/${emailId}`)
-            .select('from,subject')
+            .select('from,sender,subject')
             .get();
         
-        const recipientEmail = originalEmail.from.emailAddress.address;
-        const responseSubject = subject || `Re: ${originalEmail.subject}`;
+        // Extract recipient email safely
+        const recipientEmail = originalEmail.from?.emailAddress?.address || 
+                              originalEmail.sender?.emailAddress?.address;
+        
+        if (!recipientEmail) {
+            throw new Error('Could not determine recipient email address');
+        }
+        
+        const responseSubject = subject || `Re: ${originalEmail.subject || 'No Subject'}`;
         
         // Send the response
         const message = {
@@ -574,7 +601,11 @@ app.post('/api/emails/:emailId/send', async (req, res) => {
         
     } catch (error) {
         console.error('Error sending email response:', error);
-        res.status(500).json({ error: 'Failed to send email response', message: error.message });
+        res.status(500).json({ 
+            error: 'Failed to send email response', 
+            message: error.message,
+            details: error.response?.data || 'No additional details available'
+        });
     }
 });
 
