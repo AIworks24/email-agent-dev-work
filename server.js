@@ -165,17 +165,12 @@ app.get('/api/emails', async (req, res) => {
     }
     
     try {
-        const { Client } = require('@microsoft/microsoft-graph-client');
-        
-        const graphClient = Client.init({
-            authProvider: {
-                getAccessToken: async () => accessToken
-            }
-        });
+        const graphClient = createGraphClient(accessToken);
         
         const emails = await graphClient
             .api('/me/messages')
-            .top(5)
+            .top(50)
+            .select('id,subject,from,receivedDateTime,isRead')
             .get();
         
         res.json({
@@ -184,16 +179,12 @@ app.get('/api/emails', async (req, res) => {
             emails: emails.value
         });
     } catch (error) {
-        console.error('Detailed error:', error);
-        res.status(500).json({ 
-            error: 'Failed to fetch emails', 
-            message: error.message,
-            details: error.response?.data || error.stack
-        });
+        console.error('Error fetching emails:', error);
+        res.status(500).json({ error: 'Failed to fetch emails', message: error.message });
     }
 });
 
-// Calendar API routes with real Microsoft Graph
+// Calendar Overview API - gets calendar counts  
 app.get('/api/calendar/events', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -201,13 +192,7 @@ app.get('/api/calendar/events', async (req, res) => {
     }
     
     try {
-        const { Client } = require('@microsoft/microsoft-graph-client');
-        
-        const graphClient = Client.init({
-            authProvider: {
-                getAccessToken: async () => accessToken
-            }
-        });
+        const graphClient = createGraphClient(accessToken);
         
         const { days = 7 } = req.query;
         const startDate = new Date();
@@ -217,23 +202,54 @@ app.get('/api/calendar/events', async (req, res) => {
         const events = await graphClient
             .api('/me/events')
             .filter(`start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`)
-            .select('id,subject,start,end,location,attendees,importance,showAs')
-            .orderby('start/dateTime')
+            .top(50)
             .get();
         
         res.json({
             success: true,
-            period: `${days} days`,
             count: events.value.length,
             events: events.value
         });
     } catch (error) {
-        console.error('Error fetching calendar events:', error);
+        console.error('Error fetching calendar:', error);
         res.status(500).json({ error: 'Failed to fetch calendar events', message: error.message });
     }
 });
 
+// Today's calendar
+app.get('/api/calendar/today', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const graphClient = createGraphClient(accessToken);
+        
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const events = await graphClient
+            .api('/me/events')
+            .filter(`start/dateTime ge '${today.toISOString()}' and start/dateTime lt '${tomorrow.toISOString()}'`)
+            .get();
+        
+        res.json({
+            success: true,
+            date: today.toDateString(),
+            eventCount: events.value.length,
+            events: events.value,
+            summary: `You have ${events.value.length} meetings today.`
+        });
+    } catch (error) {
+        console.error('Error fetching today schedule:', error);
+        res.status(500).json({ error: 'Failed to fetch today\'s schedule', message: error.message });
+    }
+});
+
 // AI Email Query with real data
+// AI Query endpoint with Claude
 app.post('/api/emails/query', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -241,31 +257,19 @@ app.post('/api/emails/query', async (req, res) => {
     }
     
     try {
-        const { query, includeDays = 1 } = req.body;
-        
+        const { query } = req.body;
         if (!query) {
             return res.status(400).json({ error: 'Query is required' });
         }
 
-        const { Client } = require('@microsoft/microsoft-graph-client');
+        const graphClient = createGraphClient(accessToken);
         const axios = require('axios');
         
-        const graphClient = Client.init({
-            authProvider: {
-                getAccessToken: async () => accessToken
-            }
-        });
-        
         // Get real email data
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - includeDays);
-        
         const emails = await graphClient
             .api('/me/messages')
-            .filter(`receivedDateTime ge ${startDate.toISOString()}`)
-            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
-            .orderby('receivedDateTime desc')
             .top(20)
+            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
             .get();
 
         // Format emails for Claude
@@ -315,14 +319,12 @@ Provide a helpful response to the user's query. Be specific and actionable.`
         });
         
     } catch (error) {
-        console.error('Error processing email query:', error);
-        res.status(500).json({ 
-            error: 'Failed to process query',
-            message: error.message 
-        });
+        console.error('Error processing query:', error);
+        res.status(500).json({ error: 'Failed to process query', message: error.message });
     }
 });
 
+// Email summary with Claude
 app.get('/api/emails/summary/daily', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -330,28 +332,16 @@ app.get('/api/emails/summary/daily', async (req, res) => {
     }
     
     try {
-        const { Client } = require('@microsoft/microsoft-graph-client');
+        const graphClient = createGraphClient(accessToken);
         const axios = require('axios');
-        
-        const graphClient = Client.init({
-            authProvider: {
-                getAccessToken: async () => accessToken
-            }
-        });
-        
-        const { days = 1 } = req.query;
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - parseInt(days));
         
         const emails = await graphClient
             .api('/me/messages')
-            .filter(`receivedDateTime ge ${startDate.toISOString()}`)
-            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
-            .orderby('receivedDateTime desc')
             .top(20)
+            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
             .get();
 
-        // Create summary using Claude AI
+        // Format for Claude
         const emailSummary = emails.value.map((email, index) => {
             const from = email.from?.emailAddress?.address || 'Unknown sender';
             const name = email.from?.emailAddress?.name || '';
@@ -367,7 +357,7 @@ app.get('/api/emails/summary/daily', async (req, res) => {
 
         const summaryQuery = `Provide a summary of these emails including:
         1. Total number of emails
-        2. Number of unread emails
+        2. Number of unread emails  
         3. Most important emails (by sender or content)
         4. Any action items or follow-ups needed
         5. Quick overview of main topics/themes`;
@@ -394,21 +384,17 @@ Provide a helpful summary of the user's emails. Be specific and actionable.`
             }
         });
         
+        const unreadCount = emails.value.filter(e => !e.isRead).length;
+        
         res.json({
             success: true,
-            period: `${days} day(s)`,
             totalEmails: emails.value.length,
-            unreadEmails: emails.value.filter(e => !e.isRead).length,
+            unreadEmails: unreadCount,
             summary: claudeResponse.data.content[0].text
         });
-        
     } catch (error) {
-        console.error('Error generating email summary:', error);
-        res.status(500).json({ 
-            error: 'Failed to generate email summary',
-            message: error.message,
-            details: error.response?.data || error.toString()
-        });
+        console.error('Error generating summary:', error);
+        res.status(500).json({ error: 'Failed to generate email summary', message: error.message });
     }
 });
 
