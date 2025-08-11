@@ -8,6 +8,17 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+const session = require('express-session');
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-session-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/index.html'));
 });
@@ -57,12 +68,49 @@ app.get('/auth/login', async (req, res) => {
     }
 });
 
-app.get('/auth/callback', (req, res) => {
-    res.json({ 
-        message: 'Callback received',
-        code: req.query.code ? 'received' : 'missing',
-        query: req.query
-    });
+app.get('/auth/callback', async (req, res) => {
+    if (!req.query.code) {
+        return res.status(400).json({ error: 'Authorization code not provided' });
+    }
+
+    try {
+        const { ConfidentialClientApplication } = require('@azure/msal-node');
+        
+        const msalConfig = {
+            auth: {
+                clientId: process.env.AZURE_CLIENT_ID,
+                clientSecret: process.env.AZURE_CLIENT_SECRET,
+                authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID || 'common'}`
+            }
+        };
+
+        const pca = new ConfidentialClientApplication(msalConfig);
+        const scopes = [
+            'https://graph.microsoft.com/Mail.ReadWrite',
+            'https://graph.microsoft.com/Mail.Send',
+            'https://graph.microsoft.com/Calendars.ReadWrite',
+            'https://graph.microsoft.com/User.Read'
+        ];
+
+        const tokenRequest = {
+            code: req.query.code,
+            scopes: scopes,
+            redirectUri: process.env.REDIRECT_URI,
+        };
+
+        const response = await pca.acquireTokenByCode(tokenRequest);
+        
+        // Store token in session (we'll need to add session middleware)
+        // For now, just redirect to dashboard with success
+        res.redirect('/dashboard?auth=success');
+        
+    } catch (error) {
+        console.error('Token exchange error:', error);
+        res.status(500).json({ 
+            error: 'Token exchange failed',
+            message: error.message
+        });
+    }
 });
 
 app.listen(PORT, () => {
