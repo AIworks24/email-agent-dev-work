@@ -27,6 +27,10 @@ app.get('/health', (req, res) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/dashboard.html'));
+});
+
 app.get('/auth/login', async (req, res) => {
     try {
         // For now, let's test if we can load the MSAL library
