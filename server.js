@@ -628,7 +628,8 @@ app.post('/api/emails/:emailId/send', async (req, res) => {
     }
 });
 
-// AI Calendar Analysis and Recommendations
+// Replace the existing /api/calendar/analyze endpoint in your server.js with this enhanced version:
+
 app.post('/api/calendar/analyze', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -636,14 +637,15 @@ app.post('/api/calendar/analyze', async (req, res) => {
     }
     
     try {
-        const { query } = req.body;
+        const { query, emailContext } = req.body; // emailContext can include selected email data
         const graphClient = createGraphClient(accessToken);
         const axios = require('axios');
         
         // Get recent emails and calendar events for context
-        const [emails, events] = await Promise.all([
-            graphClient.api('/me/messages').top(20).select('id,subject,from,receivedDateTime,bodyPreview').get(),
-            graphClient.api('/me/events').filter(`start/dateTime ge '${new Date().toISOString()}'`).top(20).get()
+        const [emails, events, userProfile] = await Promise.all([
+            graphClient.api('/me/messages').top(20).select('id,subject,from,receivedDateTime,bodyPreview,body').get(),
+            graphClient.api('/me/events').filter(`start/dateTime ge '${new Date().toISOString()}'`).top(20).get(),
+            graphClient.api('/me').select('mail,displayName').get()
         ]);
 
         const emailSummary = emails.value.map(email => 
@@ -654,9 +656,17 @@ app.post('/api/calendar/analyze', async (req, res) => {
             `${event.subject} - ${new Date(event.start.dateTime).toLocaleString()}`
         ).join('\n');
 
-        const prompt = `You are an AI calendar assistant. Analyze the user's request and current schedule to provide recommendations.
+        // Enhanced prompt for smart meeting detection
+        const prompt = `You are an AI calendar assistant with meeting detection capabilities. Analyze the user's request and current schedule to provide recommendations.
 
 User Request: ${query}
+
+${emailContext ? `
+Related Email Context:
+From: ${emailContext.from}
+Subject: ${emailContext.subject} 
+Content: ${emailContext.content}
+` : ''}
 
 Recent Emails:
 ${emailSummary}
@@ -664,12 +674,38 @@ ${emailSummary}
 Upcoming Calendar Events:
 ${eventSummary}
 
-Based on this information, provide:
-1. Analysis of current schedule and any conflicts
-2. Specific meeting recommendations with suggested times, attendees, and agenda
-3. For each recommendation, provide a JSON object with: title, suggestedTime, duration, attendees, agenda
+Current User: ${userProfile.displayName} (${userProfile.mail})
 
-Format your response as recommendations followed by a JSON array of meeting suggestions.`;
+Based on this information, provide:
+
+1. **Analysis**: Analyze the request and determine if it involves scheduling a meeting or appointment
+2. **Meeting Detection**: If a meeting is suggested/requested, identify:
+   - Meeting purpose and type
+   - Suggested attendees (include original email sender if from email context)
+   - Recommended duration
+   - Best time slots this week or next week
+   - Whether it should be virtual (Teams/Zoom) or in-person
+3. **Specific Recommendations**: Provide actionable scheduling suggestions
+4. **JSON Meeting Suggestion**: If appropriate, provide a JSON object with meeting details
+
+If you detect a meeting should be scheduled, end your response with a JSON object in this exact format:
+{
+  "meetingDetected": true,
+  "meetingDetails": {
+    "title": "Suggested meeting title",
+    "duration": 60,
+    "attendees": ["email1@domain.com", "email2@domain.com"],
+    "description": "Meeting purpose and agenda",
+    "meetingType": "teams|zoom|in-person",
+    "suggestedTimes": [
+      {"date": "2025-01-15", "time": "14:00", "label": "Today 2:00 PM"},
+      {"date": "2025-01-16", "time": "10:00", "label": "Tomorrow 10:00 AM"}
+    ],
+    "priority": "high|medium|low"
+  }
+}
+
+If no meeting is detected, set "meetingDetected": false.`;
 
         const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
             model: 'claude-sonnet-4-20250514',
@@ -683,16 +719,111 @@ Format your response as recommendations followed by a JSON array of meeting sugg
             }
         });
 
+        const responseText = claudeResponse.data.content[0].text;
+        
+        // Try to extract JSON from response
+        let meetingData = null;
+        const jsonMatch = responseText.match(/\{[\s\S]*"meetingDetected"[\s\S]*\}/);
+        if (jsonMatch) {
+            try {
+                meetingData = JSON.parse(jsonMatch[0]);
+            } catch (e) {
+                console.log('Could not parse meeting JSON:', e);
+            }
+        }
+
         res.json({
             success: true,
-            analysis: claudeResponse.data.content[0].text,
+            analysis: responseText,
+            meetingData: meetingData,
             emailCount: emails.value.length,
             eventCount: events.value.length
         });
         
     } catch (error) {
         console.error('Error analyzing calendar:', error);
-        res.status(500).json({ error: 'Failed to analyze calendar', message: error.message });
+        res.status(500).json({ 
+            error: 'Failed to analyze calendar', 
+            message: error.message 
+        });
+    }
+});
+
+// Enhanced meeting creation endpoint with Teams/Zoom support
+app.post('/api/calendar/create-invite', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { title, startTime, endTime, attendees, location, agenda, meetingType } = req.body;
+        
+        if (!title || !startTime || !endTime) {
+            return res.status(400).json({ error: 'Title, start time, and end time are required' });
+        }
+        
+        const graphClient = createGraphClient(accessToken);
+        
+        // Prepare meeting location based on type
+        let meetingLocation = location;
+        let onlineMeeting = null;
+        
+        if (meetingType === 'teams') {
+            onlineMeeting = {
+                provider: 'teamsForBusiness'
+            };
+            meetingLocation = 'Microsoft Teams Meeting';
+        } else if (meetingType === 'zoom') {
+            meetingLocation = 'Zoom Meeting (Link to be provided)';
+        }
+        
+        const event = {
+            subject: title,
+            start: {
+                dateTime: startTime,
+                timeZone: 'UTC'
+            },
+            end: {
+                dateTime: endTime,
+                timeZone: 'UTC'
+            },
+            body: {
+                contentType: 'HTML',
+                content: agenda || 'Meeting agenda to be determined.'
+            },
+            location: meetingLocation ? {
+                displayName: meetingLocation
+            } : undefined,
+            attendees: attendees ? attendees.map(email => ({
+                emailAddress: {
+                    address: email,
+                    name: email
+                },
+                type: 'required'
+            })) : [],
+            isOnlineMeeting: meetingType === 'teams',
+            onlineMeetingProvider: meetingType === 'teams' ? 'teamsForBusiness' : undefined
+        };
+
+        const createdEvent = await graphClient
+            .api('/me/events')
+            .post(event);
+        
+        res.json({
+            success: true,
+            message: 'Calendar invite created successfully',
+            eventId: createdEvent.id,
+            event: createdEvent,
+            meetingType: meetingType
+        });
+        
+    } catch (error) {
+        console.error('Error creating calendar invite:', error);
+        res.status(500).json({ 
+            error: 'Failed to create calendar invite', 
+            message: error.message 
+        });
     }
 });
 
