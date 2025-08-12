@@ -183,23 +183,6 @@
             margin: 0.25rem 0;
         }
 
-        .response-area code {
-            background: #e9ecef;
-            padding: 0.2rem 0.4rem;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-        }
-
-        .response-area blockquote {
-            border-left: 4px solid #667eea;
-            padding-left: 1rem;
-            margin: 1rem 0;
-            background: rgba(102, 126, 234, 0.05);
-            padding: 0.5rem 1rem;
-            border-radius: 0 4px 4px 0;
-        }
-
         .response-area .highlight-box {
             background: #e8f5e8;
             border: 1px solid #4caf50;
@@ -700,64 +683,6 @@
             loadCalendarStats();
         };
 
-        async function loadUserInfo() {
-            try {
-                const response = await fetch('/auth/user');
-                if (response.ok) {
-                    const data = await response.json();
-                    currentUser = data.user;
-                    document.getElementById('user-name').textContent = data.user.name || data.user.username;
-                } else {
-                    window.location.href = '/auth/login';
-                }
-            } catch (error) {
-                console.error('Error loading user info:', error);
-                document.getElementById('user-name').textContent = 'Error loading user';
-            }
-        }
-
-        async function loadEmailStats() {
-            try {
-                const response = await fetch('/api/emails?days=1');
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('total-emails').textContent = data.count;
-                    document.getElementById('unread-emails').textContent = 
-                        data.emails.filter(email => !email.isRead).length;
-                } else {
-                    throw new Error('Failed to fetch emails');
-                }
-            } catch (error) {
-                console.error('Error loading email stats:', error);
-                document.getElementById('total-emails').textContent = 'Error';
-                document.getElementById('unread-emails').textContent = 'Error';
-            }
-        }
-
-        async function loadCalendarStats() {
-            try {
-                const response = await fetch('/api/calendar/events?days=1');
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('today-meetings').textContent = data.count;
-                } else {
-                    document.getElementById('today-meetings').textContent = '0';
-                }
-
-                const weekResponse = await fetch('/api/calendar/events?days=7');
-                if (weekResponse.ok) {
-                    const weekData = await weekResponse.json();
-                    document.getElementById('week-meetings').textContent = weekData.count;
-                } else {
-                    document.getElementById('week-meetings').textContent = '0';
-                }
-            } catch (error) {
-                console.error('Error loading calendar stats:', error);
-                document.getElementById('today-meetings').textContent = 'Error';
-                document.getElementById('week-meetings').textContent = 'Error';
-            }
-        }
-
         // Utility function to format markdown-style text into HTML
         function formatMarkdownResponse(text) {
             // First, clean up any JSON from the response
@@ -825,6 +750,66 @@
             }
             return null;
         }
+
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/auth/user');
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data.user;
+                    document.getElementById('user-name').textContent = data.user.name || data.user.username;
+                } else {
+                    window.location.href = '/auth/login';
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                document.getElementById('user-name').textContent = 'Error loading user';
+            }
+        }
+
+        async function loadEmailStats() {
+            try {
+                const response = await fetch('/api/emails?days=1');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('total-emails').textContent = data.count;
+                    document.getElementById('unread-emails').textContent = 
+                        data.emails.filter(email => !email.isRead).length;
+                } else {
+                    throw new Error('Failed to fetch emails');
+                }
+            } catch (error) {
+                console.error('Error loading email stats:', error);
+                document.getElementById('total-emails').textContent = 'Error';
+                document.getElementById('unread-emails').textContent = 'Error';
+            }
+        }
+
+        async function loadCalendarStats() {
+            try {
+                const response = await fetch('/api/calendar/events?days=1');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('today-meetings').textContent = data.count;
+                } else {
+                    document.getElementById('today-meetings').textContent = '0';
+                }
+
+                const weekResponse = await fetch('/api/calendar/events?days=7');
+                if (weekResponse.ok) {
+                    const weekData = await weekResponse.json();
+                    document.getElementById('week-meetings').textContent = weekData.count;
+                } else {
+                    document.getElementById('week-meetings').textContent = '0';
+                }
+            } catch (error) {
+                console.error('Error loading calendar stats:', error);
+                document.getElementById('today-meetings').textContent = 'Error';
+                document.getElementById('week-meetings').textContent = 'Error';
+            }
+        }
+
+        async function processQuery() {
             const query = document.getElementById('query').value.trim();
             if (!query) {
                 alert('Please enter a question');
@@ -832,7 +817,7 @@
             }
 
             const responseArea = document.getElementById('response');
-            responseArea.textContent = 'Processing your request...';
+            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Processing your request...</div>';
 
             try {
                 const response = await fetch('/api/emails/query', {
@@ -848,14 +833,14 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    responseArea.textContent = data.response;
+                    responseArea.innerHTML = formatMarkdownResponse(data.response);
                 } else {
                     const errorData = await response.json();
-                    responseArea.textContent = `Error: ${errorData.message || 'Failed to process query'}`;
+                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to process query'}</div>`;
                 }
             } catch (error) {
                 console.error('Error processing query:', error);
-                responseArea.textContent = 'Error: Failed to connect to AI service';
+                responseArea.innerHTML = '<div class="error">Error: Failed to connect to AI service</div>';
             }
         }
 
@@ -1155,7 +1140,6 @@
                 });
                 
                 if (response.ok) {
-                    const data = await response.json();
                     alert('Email sent successfully!');
                     document.getElementById('email-response-preview').classList.remove('active');
                     document.getElementById('email-response-form').classList.add('hidden');
@@ -1172,7 +1156,6 @@
         }
 
         function editResponse() {
-            // Allow user to edit the response
             const content = document.getElementById('response-content');
             const responseText = generatedResponse.generatedResponse;
             
@@ -1196,7 +1179,6 @@
             }
             
             try {
-                // Get the full email content
                 const emailResponse = await fetch(`/api/emails/${selectedEmailId}`);
                 if (!emailResponse.ok) {
                     throw new Error('Failed to fetch email content');
@@ -1205,16 +1187,13 @@
                 const emailData = await emailResponse.json();
                 const email = emailData.email;
                 
-                // Set the calendar query based on email content
                 const emailSubject = email.subject || 'No Subject';
                 const fromName = email.from?.emailAddress?.name || 'Unknown';
                 
                 document.getElementById('calendar-query').value = `Analyze this email for meeting opportunities: "${emailSubject}" from ${fromName}`;
                 
-                // Scroll to calendar section
                 document.querySelector('.calendar-analysis-section').scrollIntoView({ behavior: 'smooth' });
                 
-                // Trigger calendar analysis with email context
                 setTimeout(() => {
                     analyzeCalendar();
                 }, 500);
@@ -1237,7 +1216,6 @@
             responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Analyzing your calendar and detecting meeting opportunities...</div>';
 
             try {
-                // Check if we have a selected email for context
                 let emailContext = null;
                 if (selectedEmailId) {
                     const emailResponse = await fetch(`/api/emails/${selectedEmailId}`);
@@ -1266,14 +1244,11 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Extract JSON from response text and clean it
                     const meetingData = extractJsonFromResponse(data.analysis);
                     const cleanedAnalysis = removeJsonFromResponse(data.analysis);
                     
-                    // Display the formatted analysis
                     responseArea.innerHTML = formatMarkdownResponse(cleanedAnalysis);
                     
-                    // Check if a meeting was detected - use extracted JSON first, then fallback to data.meetingData
                     const finalMeetingData = meetingData || data.meetingData;
                     if (finalMeetingData && finalMeetingData.meetingDetected) {
                         showMeetingSuggestion(finalMeetingData.meetingDetails || finalMeetingData);
@@ -1299,7 +1274,6 @@
                 margin-top: 1rem;
             `;
             
-            // Format suggested times
             const timeOptions = meetingDetails.suggestedTimes ? meetingDetails.suggestedTimes.map((time, index) => 
                 `<option value="${time.date}T${time.time}">${time.label}</option>`
             ).join('') : '<option value="">No suggested times available</option>';
@@ -1359,26 +1333,12 @@
                 </div>
             `;
             
-            // Determine which container to append to
-            let containerElement;
-            if (document.getElementById('calendar-response').contains(document.activeElement) || 
-                document.getElementById('calendar-query').value.trim() !== '') {
-                // If we're in the calendar section, add to calendar response
-                containerElement = document.getElementById('calendar-response');
-            } else {
-                // Otherwise, add to the main response area (Ask Your Email Assistant)
-                containerElement = document.getElementById('response');
-            }
+            document.getElementById('calendar-response').appendChild(suggestionDiv);
             
-            // Add to the appropriate container
-            containerElement.appendChild(suggestionDiv);
-            
-            // Add event listener for custom time selection
             document.getElementById('suggested-time').addEventListener('change', function() {
                 const customSection = document.getElementById('custom-time-section');
                 if (this.value === 'custom') {
                     customSection.style.display = 'block';
-                    // Set default times
                     const now = new Date();
                     const oneHour = new Date(now.getTime() + 60 * 60 * 1000);
                     document.getElementById('custom-start-time').value = now.toISOString().slice(0, 16);
@@ -1388,7 +1348,6 @@
                 }
             });
             
-            // Store meeting details globally for the functions
             window.suggestedMeetingDetails = meetingDetails;
         }
 
@@ -1434,10 +1393,9 @@
                 });
                 
                 if (response.ok) {
-                    const data = await response.json();
                     alert('🎉 Meeting invite created successfully!');
                     dismissSuggestion();
-                    loadCalendarStats(); // Refresh stats
+                    loadCalendarStats();
                 } else {
                     const errorData = await response.json();
                     alert(`Error: ${errorData.message || 'Failed to create meeting'}`);
@@ -1452,12 +1410,10 @@
             const meetingDetails = window.suggestedMeetingDetails;
             if (!meetingDetails) return;
             
-            // Pre-fill the meeting form with suggested details
             document.getElementById('meeting-title').value = meetingDetails.title;
-            document.getElementById('meeting-attendees').value = meetingDetails.attendees.join(', ');
+            document.getElementById('meeting-attendees').value = meetingDetails.attendees ? meetingDetails.attendees.join(', ') : '';
             document.getElementById('meeting-agenda').value = meetingDetails.description;
             
-            // Set suggested time if available
             if (meetingDetails.suggestedTimes && meetingDetails.suggestedTimes.length > 0) {
                 const firstSuggestion = meetingDetails.suggestedTimes[0];
                 const startDateTime = `${firstSuggestion.date}T${firstSuggestion.time}`;
@@ -1467,13 +1423,8 @@
                 document.getElementById('meeting-end').value = endDateTime.toISOString().slice(0, 16);
             }
             
-            // Show the meeting form
             document.getElementById('meeting-form').classList.remove('hidden');
-            
-            // Dismiss the suggestion
             dismissSuggestion();
-            
-            // Scroll to the form
             document.getElementById('meeting-form').scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -1482,13 +1433,6 @@
             if (suggestion) {
                 suggestion.remove();
             }
-            window.suggestedMeetingDetails = null;
-        }
-
-        // Function to clear all meeting suggestions from any section
-        function clearAllMeetingSuggestions() {
-            const suggestions = document.querySelectorAll('#meeting-suggestion');
-            suggestions.forEach(suggestion => suggestion.remove());
             window.suggestedMeetingDetails = null;
         }
 
@@ -1520,14 +1464,12 @@
         function showMeetingForm() {
             document.getElementById('meeting-form').classList.remove('hidden');
             
-            // Set default times (1 hour from now)
             const now = new Date();
             const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
             
             document.getElementById('meeting-start').value = now.toISOString().slice(0, 16);
             document.getElementById('meeting-end').value = oneHourLater.toISOString().slice(0, 16);
             
-            // Set default meeting type
             document.getElementById('meeting-type-select').value = 'teams';
             updateLocationForMeetingType();
         }
@@ -1546,23 +1488,7 @@
             }
             
             const attendees = attendeesStr ? attendeesStr.split(',').map(email => email.trim()).filter(email => email) : [];
-            
-            // Determine meeting type based on location
-            let meetingType = 'in-person';
-            const locationLower = location.toLowerCase();
-            if (locationLower.includes('teams') || locationLower.includes('microsoft teams')) {
-                meetingType = 'teams';
-            } else if (locationLower.includes('zoom')) {
-                meetingType = 'zoom';
-            } else if (location === '' || locationLower.includes('virtual') || locationLower.includes('online')) {
-                meetingType = 'teams'; // Default to Teams for virtual meetings
-            }
-            
-            // Override with selected meeting type
             const selectedMeetingType = document.getElementById('meeting-type-select').value;
-            if (selectedMeetingType) {
-                meetingType = selectedMeetingType;
-            }
             
             try {
                 const response = await fetch('/api/calendar/create-invite', {
@@ -1577,7 +1503,7 @@
                         attendees,
                         location,
                         agenda,
-                        meetingType
+                        meetingType: selectedMeetingType
                     })
                 });
                 
@@ -1593,14 +1519,12 @@
                     
                     alert(successMessage);
                     
-                    // Clear form
                     document.getElementById('meeting-title').value = '';
                     document.getElementById('meeting-attendees').value = '';
                     document.getElementById('meeting-location').value = '';
                     document.getElementById('meeting-agenda').value = '';
                     document.getElementById('meeting-form').classList.add('hidden');
                     
-                    // Refresh calendar stats
                     loadCalendarStats();
                 } else {
                     const errorData = await response.json();
