@@ -199,6 +199,8 @@ app.get('/api/debug/graph', async (req, res) => {
 });
 
 // API Routes
+// Replace the existing /api/emails endpoint in your server.js with this improved version:
+
 app.get('/api/emails', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -206,22 +208,39 @@ app.get('/api/emails', async (req, res) => {
     }
     
     try {
+        const { days = 1 } = req.query;
         const graphClient = createGraphClient(accessToken);
         
+        // Get current user info to filter out sent emails
+        const userProfile = await graphClient.api('/me').select('mail').get();
+        
+        // Get emails from Inbox folder specifically to avoid sent items
         const emails = await graphClient
-            .api('/me/messages')
+            .api('/me/mailFolders/inbox/messages')
+            .filter(`receivedDateTime ge ${new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()}`)
+            .select('id,subject,from,sender,receivedDateTime,bodyPreview,isRead,importance,hasAttachments,parentFolderId')
+            .orderby('receivedDateTime desc')
             .top(50)
-            .select('id,subject,from,receivedDateTime,isRead')
             .get();
+        
+        // Additional filtering on the server side to ensure we only get received emails
+        const receivedEmails = emails.value.filter(email => {
+            // Make sure this email has a 'from' field and it's not from the user
+            const fromEmail = email.from?.emailAddress?.address || email.sender?.emailAddress?.address;
+            return fromEmail && fromEmail.toLowerCase() !== userProfile.mail?.toLowerCase();
+        });
         
         res.json({
             success: true,
-            count: emails.value.length,
-            emails: emails.value
+            count: receivedEmails.length,
+            emails: receivedEmails
         });
     } catch (error) {
         console.error('Error fetching emails:', error);
-        res.status(500).json({ error: 'Failed to fetch emails', message: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch emails', 
+            message: error.message 
+        });
     }
 });
 
