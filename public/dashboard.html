@@ -78,7 +78,7 @@
             margin-bottom: 1rem;
         }
 
-        input[type="text"], input[type="email"], select, textarea {
+        input[type="text"], input[type="email"], input[type="datetime-local"], select, textarea {
             flex: 1;
             padding: 12px;
             border: 2px solid #e1e5e9;
@@ -86,7 +86,7 @@
             font-size: 1rem;
         }
 
-        input[type="text"]:focus, input[type="email"]:focus, select:focus, textarea:focus {
+        input[type="text"]:focus, input[type="email"]:focus, input[type="datetime-local"]:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -366,7 +366,7 @@
                 gap: 0.5rem;
             }
             
-            input[type="text"], input[type="email"], select, textarea {
+            input[type="text"], input[type="email"], input[type="datetime-local"], select, textarea {
                 padding: 14px;
                 font-size: 16px;
             }
@@ -523,6 +523,9 @@
                     <button class="btn btn-secondary" onclick="editResponse()" style="margin-left: 0.5rem;">
                         Edit Response
                     </button>
+                    <button class="btn btn-primary" onclick="analyzeEmailForMeeting()" style="margin-left: 0.5rem;">
+                        📅 Check for Meeting Needs
+                    </button>
                     <button class="btn btn-secondary" onclick="cancelEmailResponse()" style="margin-left: 0.5rem;">
                         Cancel
                     </button>
@@ -566,8 +569,17 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="meeting-location">Location (optional):</label>
-                    <input type="text" id="meeting-location" placeholder="Conference Room A or Teams Meeting">
+                    <label for="meeting-location">Location:</label>
+                    <input type="text" id="meeting-location" placeholder="Conference Room A, Teams Meeting, or Zoom Meeting">
+                </div>
+                
+                <div class="form-group">
+                    <label for="meeting-type-select">Meeting Type:</label>
+                    <select id="meeting-type-select" onchange="updateLocationForMeetingType()">
+                        <option value="in-person">In-Person Meeting</option>
+                        <option value="teams">Microsoft Teams Meeting</option>
+                        <option value="zoom">Zoom Meeting</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
@@ -834,33 +846,76 @@
                         formElement.insertBefore(previewSection, formElement.firstChild);
                     }
                     
-                    // Extract and clean email body
+                    // Extract and clean email body for full display
                     let emailBody = fullEmail.body?.content || fullEmail.bodyPreview || 'No content available';
+                    let displayBody = emailBody;
                     
-                    // Simple HTML cleaning for preview (remove most tags but keep structure)
+                    // Enhanced HTML cleaning for better readability
                     if (emailBody.includes('<html') || emailBody.includes('<body')) {
-                        emailBody = emailBody
+                        displayBody = emailBody
                             .replace(/<script[^>]*>.*?<\/script>/gi, '')
                             .replace(/<style[^>]*>.*?<\/style>/gi, '')
-                            .replace(/<[^>]*>/g, ' ')
-                            .replace(/\s+/g, ' ')
-                            .trim()
-                            .substring(0, 500) + (emailBody.length > 500 ? '...' : '');
+                            .replace(/<head[^>]*>.*?<\/head>/gi, '')
+                            .replace(/<meta[^>]*>/gi, '')
+                            .replace(/<link[^>]*>/gi, '')
+                            .replace(/<img[^>]*>/gi, '[Image]')
+                            .replace(/<br\s*\/?>/gi, '\n')
+                            .replace(/<\/p>/gi, '\n\n')
+                            .replace(/<\/div>/gi, '\n')
+                            .replace(/<\/li>/gi, '\n')
+                            .replace(/<[^>]*>/g, '')
+                            .replace(/&nbsp;/g, ' ')
+                            .replace(/&lt;/g, '<')
+                            .replace(/&gt;/g, '>')
+                            .replace(/&amp;/g, '&')
+                            .replace(/&quot;/g, '"')
+                            .replace(/\n{3,}/g, '\n\n')
+                            .trim();
                     }
                     
+                    // Truncate if extremely long (over 2000 characters) but show much more than before
+                    const isLongEmail = displayBody.length > 2000;
+                    const truncatedBody = isLongEmail ? displayBody.substring(0, 2000) + '\n\n[Email truncated - full content available for AI processing]' : displayBody;
+                    
                     previewSection.innerHTML = `
-                        <h4 style="margin: 0 0 0.5rem 0; color: #333;">📧 Email Preview</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <h4 style="margin: 0; color: #333;">📧 Email Preview</h4>
+                            ${isLongEmail ? `<button onclick="toggleEmailExpansion()" id="expand-btn" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Show Full Email</button>` : ''}
+                        </div>
                         <div style="margin-bottom: 0.5rem;"><strong>From:</strong> ${fullEmail.from?.emailAddress?.name || 'Unknown'} &lt;${fullEmail.from?.emailAddress?.address || 'unknown@email.com'}&gt;</div>
                         <div style="margin-bottom: 0.5rem;"><strong>Subject:</strong> ${fullEmail.subject || 'No Subject'}</div>
                         <div style="margin-bottom: 0.5rem;"><strong>Received:</strong> ${new Date(fullEmail.receivedDateTime).toLocaleString()}</div>
-                        <div style="background: white; padding: 0.75rem; border-radius: 4px; max-height: 150px; overflow-y: auto;">
-                            <strong>Content:</strong><br>
-                            ${emailBody}
+                        ${fullEmail.hasAttachments ? '<div style="margin-bottom: 0.5rem;"><strong>📎 Has Attachments:</strong> Yes</div>' : ''}
+                        <div style="background: white; padding: 0.75rem; border-radius: 4px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4;" id="email-body-content">
+                            <strong>Content:</strong><br><br>
+                            ${truncatedBody}
                         </div>
                     `;
+                    
+                    // Store full content for expansion feature
+                    window.fullEmailContent = displayBody;
+                    window.truncatedEmailContent = truncatedBody;
                 }
             } catch (error) {
                 console.error('Error loading email preview:', error);
+            }
+        }
+
+        function toggleEmailExpansion() {
+            const bodyContent = document.getElementById('email-body-content');
+            const expandBtn = document.getElementById('expand-btn');
+            const currentContent = bodyContent.innerHTML;
+            
+            if (currentContent.includes('[Email truncated')) {
+                // Show full content
+                bodyContent.innerHTML = `<strong>Content:</strong><br><br>${window.fullEmailContent}`;
+                expandBtn.textContent = 'Show Less';
+                bodyContent.style.maxHeight = '600px';
+            } else {
+                // Show truncated content
+                bodyContent.innerHTML = `<strong>Content:</strong><br><br>${window.truncatedEmailContent}`;
+                expandBtn.textContent = 'Show Full Email';
+                bodyContent.style.maxHeight = '400px';
             }
         }
 
@@ -972,13 +1027,13 @@
         }
 
         function editResponse() {
-            // Allow user to edit the response (could open a modal or make the content editable)
+            // Allow user to edit the response
             const content = document.getElementById('response-content');
             const responseText = generatedResponse.generatedResponse;
             
             content.innerHTML = `
                 <h4>Edit Response:</h4>
-                <textarea id="edit-response-text" style="width: 100%; min-height: 200px; margin-top: 0.5rem;">${responseText}</textarea>
+                <textarea id="edit-response-text" style="width: 100%; min-height: 200px; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid #e1e5e9; border-radius: 4px;">${responseText}</textarea>
                 <button class="btn btn-primary" onclick="updateResponse()" style="margin-top: 0.5rem;">Update Response</button>
             `;
         }
@@ -987,6 +1042,42 @@
             const newText = document.getElementById('edit-response-text').value;
             generatedResponse.generatedResponse = newText;
             showEmailResponsePreview(generatedResponse);
+        }
+
+        async function analyzeEmailForMeeting() {
+            if (!selectedEmailId) {
+                alert('Please select an email first');
+                return;
+            }
+            
+            try {
+                // Get the full email content
+                const emailResponse = await fetch(`/api/emails/${selectedEmailId}`);
+                if (!emailResponse.ok) {
+                    throw new Error('Failed to fetch email content');
+                }
+                
+                const emailData = await emailResponse.json();
+                const email = emailData.email;
+                
+                // Set the calendar query based on email content
+                const emailSubject = email.subject || 'No Subject';
+                const fromName = email.from?.emailAddress?.name || 'Unknown';
+                
+                document.getElementById('calendar-query').value = `Analyze this email for meeting opportunities: "${emailSubject}" from ${fromName}`;
+                
+                // Scroll to calendar section
+                document.querySelector('.calendar-analysis-section').scrollIntoView({ behavior: 'smooth' });
+                
+                // Trigger calendar analysis with email context
+                setTimeout(() => {
+                    analyzeCalendar();
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error analyzing email for meeting:', error);
+                alert('Failed to analyze email for meeting opportunities');
+            }
         }
 
         // Calendar Analysis Functions
@@ -998,20 +1089,45 @@
             }
 
             const responseArea = document.getElementById('calendar-response');
-            responseArea.textContent = 'Analyzing your calendar...';
+            responseArea.textContent = 'Analyzing your calendar and detecting meeting opportunities...';
 
             try {
+                // Check if we have a selected email for context
+                let emailContext = null;
+                if (selectedEmailId) {
+                    const emailResponse = await fetch(`/api/emails/${selectedEmailId}`);
+                    if (emailResponse.ok) {
+                        const emailData = await emailResponse.json();
+                        const email = emailData.email;
+                        emailContext = {
+                            from: email.from?.emailAddress?.address,
+                            subject: email.subject,
+                            content: email.body?.content || email.bodyPreview
+                        };
+                    }
+                }
+
                 const response = await fetch('/api/calendar/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ query })
+                    body: JSON.stringify({ 
+                        query,
+                        emailContext 
+                    })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    responseArea.textContent = data.analysis;
+                    
+                    // Display the analysis
+                    responseArea.innerHTML = `<div style="white-space: pre-wrap;">${data.analysis}</div>`;
+                    
+                    // Check if a meeting was detected
+                    if (data.meetingData && data.meetingData.meetingDetected) {
+                        showMeetingSuggestion(data.meetingData.meetingDetails);
+                    }
                 } else {
                     const errorData = await response.json();
                     responseArea.textContent = `Error: ${errorData.message || 'Failed to analyze calendar'}`;
@@ -1022,9 +1138,215 @@
             }
         }
 
+        function showMeetingSuggestion(meetingDetails) {
+            const suggestionDiv = document.createElement('div');
+            suggestionDiv.id = 'meeting-suggestion';
+            suggestionDiv.style.cssText = `
+                background: #e8f5e8; 
+                border: 2px solid #4caf50; 
+                border-radius: 8px; 
+                padding: 1rem; 
+                margin-top: 1rem;
+            `;
+            
+            // Format suggested times
+            const timeOptions = meetingDetails.suggestedTimes.map((time, index) => 
+                `<option value="${time.date}T${time.time}">${time.label}</option>`
+            ).join('');
+            
+            suggestionDiv.innerHTML = `
+                <h4 style="color: #2e7d32; margin: 0 0 1rem 0;">🤖 AI Meeting Suggestion Detected!</h4>
+                <div style="background: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                    <p><strong>Meeting:</strong> ${meetingDetails.title}</p>
+                    <p><strong>Duration:</strong> ${meetingDetails.duration} minutes</p>
+                    <p><strong>Attendees:</strong> ${meetingDetails.attendees.join(', ')}</p>
+                    <p><strong>Type:</strong> ${meetingDetails.meetingType}</p>
+                    <p><strong>Priority:</strong> ${meetingDetails.priority}</p>
+                    <p><strong>Description:</strong> ${meetingDetails.description}</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label><strong>Suggested Time:</strong></label>
+                        <select id="suggested-time" style="width: 100%; padding: 0.5rem;">
+                            ${timeOptions}
+                            <option value="custom">Custom Time...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label><strong>Meeting Type:</strong></label>
+                        <select id="suggested-meeting-type" style="width: 100%; padding: 0.5rem;">
+                            <option value="teams" ${meetingDetails.meetingType === 'teams' ? 'selected' : ''}>Teams Meeting</option>
+                            <option value="zoom" ${meetingDetails.meetingType === 'zoom' ? 'selected' : ''}>Zoom Meeting</option>
+                            <option value="in-person" ${meetingDetails.meetingType === 'in-person' ? 'selected' : ''}>In-Person</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="custom-time-section" style="display: none; margin-bottom: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <label>Custom Start Time:</label>
+                            <input type="datetime-local" id="custom-start-time" style="width: 100%; padding: 0.5rem;">
+                        </div>
+                        <div>
+                            <label>Custom End Time:</label>
+                            <input type="datetime-local" id="custom-end-time" style="width: 100%; padding: 0.5rem;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem;">
+                    <button onclick="createSuggestedMeeting()" class="btn btn-success">
+                        📅 Create Meeting Invite
+                    </button>
+                    <button onclick="customizeMeeting()" class="btn btn-primary">
+                        ✏️ Customize Details
+                    </button>
+                    <button onclick="dismissSuggestion()" class="btn btn-secondary">
+                        ❌ Dismiss
+                    </button>
+                </div>
+            `;
+            
+            // Add to calendar response area
+            document.getElementById('calendar-response').appendChild(suggestionDiv);
+            
+            // Add event listener for custom time selection
+            document.getElementById('suggested-time').addEventListener('change', function() {
+                const customSection = document.getElementById('custom-time-section');
+                if (this.value === 'custom') {
+                    customSection.style.display = 'block';
+                    // Set default times
+                    const now = new Date();
+                    const oneHour = new Date(now.getTime() + 60 * 60 * 1000);
+                    document.getElementById('custom-start-time').value = now.toISOString().slice(0, 16);
+                    document.getElementById('custom-end-time').value = oneHour.toISOString().slice(0, 16);
+                } else {
+                    customSection.style.display = 'none';
+                }
+            });
+            
+            // Store meeting details globally for the functions
+            window.suggestedMeetingDetails = meetingDetails;
+        }
+
+        async function createSuggestedMeeting() {
+            const meetingDetails = window.suggestedMeetingDetails;
+            if (!meetingDetails) return;
+            
+            const selectedTime = document.getElementById('suggested-time').value;
+            const meetingType = document.getElementById('suggested-meeting-type').value;
+            
+            let startTime, endTime;
+            
+            if (selectedTime === 'custom') {
+                startTime = document.getElementById('custom-start-time').value;
+                endTime = document.getElementById('custom-end-time').value;
+                
+                if (!startTime || !endTime) {
+                    alert('Please set custom start and end times');
+                    return;
+                }
+            } else {
+                startTime = selectedTime;
+                const startDate = new Date(selectedTime);
+                const endDate = new Date(startDate.getTime() + meetingDetails.duration * 60 * 1000);
+                endTime = endDate.toISOString().slice(0, 16);
+            }
+            
+            try {
+                const response = await fetch('/api/calendar/create-invite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: meetingDetails.title,
+                        startTime: new Date(startTime).toISOString(),
+                        endTime: new Date(endTime).toISOString(),
+                        attendees: meetingDetails.attendees,
+                        agenda: meetingDetails.description,
+                        meetingType: meetingType,
+                        location: meetingType === 'in-person' ? 'Office' : undefined
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('🎉 Meeting invite created successfully!');
+                    dismissSuggestion();
+                    loadCalendarStats(); // Refresh stats
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.message || 'Failed to create meeting'}`);
+                }
+            } catch (error) {
+                console.error('Error creating meeting:', error);
+                alert('Failed to create meeting invite');
+            }
+        }
+
+        function customizeMeeting() {
+            const meetingDetails = window.suggestedMeetingDetails;
+            if (!meetingDetails) return;
+            
+            // Pre-fill the meeting form with suggested details
+            document.getElementById('meeting-title').value = meetingDetails.title;
+            document.getElementById('meeting-attendees').value = meetingDetails.attendees.join(', ');
+            document.getElementById('meeting-agenda').value = meetingDetails.description;
+            
+            // Set suggested time if available
+            if (meetingDetails.suggestedTimes && meetingDetails.suggestedTimes.length > 0) {
+                const firstSuggestion = meetingDetails.suggestedTimes[0];
+                const startDateTime = `${firstSuggestion.date}T${firstSuggestion.time}`;
+                const endDateTime = new Date(new Date(startDateTime).getTime() + meetingDetails.duration * 60 * 1000);
+                
+                document.getElementById('meeting-start').value = startDateTime;
+                document.getElementById('meeting-end').value = endDateTime.toISOString().slice(0, 16);
+            }
+            
+            // Show the meeting form
+            document.getElementById('meeting-form').classList.remove('hidden');
+            
+            // Dismiss the suggestion
+            dismissSuggestion();
+            
+            // Scroll to the form
+            document.getElementById('meeting-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function dismissSuggestion() {
+            const suggestion = document.getElementById('meeting-suggestion');
+            if (suggestion) {
+                suggestion.remove();
+            }
+            window.suggestedMeetingDetails = null;
+        }
+
         function quickCalendarQuery(query) {
             document.getElementById('calendar-query').value = query;
             analyzeCalendar();
+        }
+
+        function updateLocationForMeetingType() {
+            const meetingType = document.getElementById('meeting-type-select').value;
+            const locationField = document.getElementById('meeting-location');
+            
+            switch(meetingType) {
+                case 'teams':
+                    locationField.value = 'Microsoft Teams Meeting';
+                    locationField.placeholder = 'Teams meeting link will be auto-generated';
+                    break;
+                case 'zoom':
+                    locationField.value = 'Zoom Meeting';
+                    locationField.placeholder = 'Add Zoom link manually after creation';
+                    break;
+                case 'in-person':
+                    locationField.value = '';
+                    locationField.placeholder = 'Conference Room A, Office Building, etc.';
+                    break;
+            }
         }
 
         function showMeetingForm() {
@@ -1036,6 +1358,10 @@
             
             document.getElementById('meeting-start').value = now.toISOString().slice(0, 16);
             document.getElementById('meeting-end').value = oneHourLater.toISOString().slice(0, 16);
+            
+            // Set default meeting type
+            document.getElementById('meeting-type-select').value = 'teams';
+            updateLocationForMeetingType();
         }
 
         async function createMeetingInvite() {
@@ -1053,6 +1379,23 @@
             
             const attendees = attendeesStr ? attendeesStr.split(',').map(email => email.trim()).filter(email => email) : [];
             
+            // Determine meeting type based on location
+            let meetingType = 'in-person';
+            const locationLower = location.toLowerCase();
+            if (locationLower.includes('teams') || locationLower.includes('microsoft teams')) {
+                meetingType = 'teams';
+            } else if (locationLower.includes('zoom')) {
+                meetingType = 'zoom';
+            } else if (location === '' || locationLower.includes('virtual') || locationLower.includes('online')) {
+                meetingType = 'teams'; // Default to Teams for virtual meetings
+            }
+            
+            // Override with selected meeting type
+            const selectedMeetingType = document.getElementById('meeting-type-select').value;
+            if (selectedMeetingType) {
+                meetingType = selectedMeetingType;
+            }
+            
             try {
                 const response = await fetch('/api/calendar/create-invite', {
                     method: 'POST',
@@ -1065,13 +1408,22 @@
                         endTime: new Date(endTime).toISOString(),
                         attendees,
                         location,
-                        agenda
+                        agenda,
+                        meetingType
                     })
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    alert('Meeting invite created successfully!');
+                    let successMessage = 'Meeting invite created successfully!';
+                    
+                    if (data.meetingType === 'teams') {
+                        successMessage += '\n\nTeams meeting link will be automatically generated.';
+                    } else if (data.meetingType === 'zoom') {
+                        successMessage += '\n\nNote: Please add the Zoom meeting link manually to the meeting.';
+                    }
+                    
+                    alert(successMessage);
                     
                     // Clear form
                     document.getElementById('meeting-title').value = '';
