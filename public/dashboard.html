@@ -677,6 +677,35 @@
     </div>
 
     <script>
+function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
+            const date = new Date(dateString);
+            return {
+                date: date.toLocaleDateString('en-US', { 
+                    timeZone: timezone,
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                }),
+                time: date.toLocaleTimeString('en-US', {
+                    timeZone: timezone,
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                }),
+                full: date.toLocaleString('en-US', {
+                    timeZone: timezone,
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                })
+            };
+        }
+
         let currentUser = null;
         let selectedEmailId = null;
         let generatedResponse = null;
@@ -894,7 +923,29 @@
                 const response = await fetch('/api/calendar/today');
                 if (response.ok) {
                     const data = await response.json();
-                    responseArea.innerHTML = formatMarkdownResponse(`# Today's Schedule (${data.date})\n\n${data.summary}`);
+                    
+                    let scheduleText = `# Today's Schedule (${data.date})\n\n`;
+                    scheduleText += `**${data.eventCount} meetings scheduled**\n\n`;
+                    
+                    if (data.events && data.events.length > 0) {
+                        scheduleText += `## Your Meetings:\n\n`;
+                        data.events.forEach((event, index) => {
+                            const timeInfo = formatDateWithTimezone(event.start.dateTime);
+                            scheduleText += `**${index + 1}. ${event.subject}**\n`;
+                            scheduleText += `📅 Time: ${event.displayTime || timeInfo.time}\n`;
+                            scheduleText += `📍 Location: ${event.location?.displayName || 'No location specified'}\n`;
+                            if (event.attendees && event.attendees.length > 0) {
+                                scheduleText += `👥 Attendees: ${event.attendees.length} people\n`;
+                            }
+                            scheduleText += `\n`;
+                        });
+                    } else {
+                        scheduleText += `🎉 **No meetings scheduled today!** \n\nGreat day to focus on deep work.`;
+                    }
+                    
+                    scheduleText += `\n\n*Times displayed in Eastern Time (${data.timezone || 'America/New_York'})*`;
+                    
+                    responseArea.innerHTML = formatMarkdownResponse(scheduleText);
                 } else {
                     const errorData = await response.json();
                     responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to load schedule'}</div>`;
@@ -1292,9 +1343,12 @@
                 margin-top: 1rem;
             `;
             
-            const timeOptions = meetingDetails.suggestedTimes ? meetingDetails.suggestedTimes.map((time, index) => 
-                `<option value="${time.date}T${time.time}">${time.label}</option>`
-            ).join('') : '<option value="">No suggested times available</option>';
+            // Format suggested times with proper timezone display
+            const timeOptions = meetingDetails.suggestedTimes ? meetingDetails.suggestedTimes.map((time, index) => {
+                const dateTime = new Date(`${time.date}T${time.time}`);
+                const estTime = formatDateWithTimezone(dateTime.toISOString());
+                return `<option value="${time.date}T${time.time}">${time.label} (${estTime.full})</option>`;
+            }).join('') : '<option value="">No suggested times available</option>';
             
             suggestionDiv.innerHTML = `
                 <h4 style="color: #2e7d32; margin: 0 0 1rem 0;">🤖 AI Meeting Suggestion Detected!</h4>
@@ -1309,7 +1363,7 @@
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label><strong>Suggested Time:</strong></label>
+                        <label><strong>Suggested Time (EST):</strong></label>
                         <select id="suggested-time" style="width: 100%; padding: 0.5rem;">
                             ${timeOptions}
                             <option value="custom">Custom Time...</option>
@@ -1328,11 +1382,11 @@
                 <div id="custom-time-section" style="display: none; margin-bottom: 1rem;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
-                            <label>Custom Start Time:</label>
+                            <label>Custom Start Time (EST):</label>
                             <input type="datetime-local" id="custom-start-time" style="width: 100%; padding: 0.5rem;">
                         </div>
                         <div>
-                            <label>Custom End Time:</label>
+                            <label>Custom End Time (EST):</label>
                             <input type="datetime-local" id="custom-end-time" style="width: 100%; padding: 0.5rem;">
                         </div>
                     </div>
@@ -1353,10 +1407,12 @@
             
             document.getElementById('calendar-response').appendChild(suggestionDiv);
             
+            // Update the event listener to handle timezone conversion
             document.getElementById('suggested-time').addEventListener('change', function() {
                 const customSection = document.getElementById('custom-time-section');
                 if (this.value === 'custom') {
                     customSection.style.display = 'block';
+                    // Set default times in user's local timezone
                     const now = new Date();
                     const oneHour = new Date(now.getTime() + 60 * 60 * 1000);
                     document.getElementById('custom-start-time').value = now.toISOString().slice(0, 16);
