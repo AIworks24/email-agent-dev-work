@@ -264,6 +264,7 @@
             border-bottom: 1px solid #e1e5e9;
             cursor: pointer;
             transition: background 0.2s ease;
+            position: relative;
         }
 
         .email-item:hover {
@@ -275,9 +276,21 @@
             border-left: 4px solid #667eea;
         }
 
+        .email-item.unread {
+            background: #f8f9ff;
+            border-left: 3px solid #667eea;
+        }
+
+        .email-item.unread .email-subject {
+            font-weight: 600;
+        }
+
         .email-subject {
             font-weight: 500;
             margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
         }
 
         .email-from {
@@ -290,6 +303,10 @@
             font-size: 0.85rem;
             color: #6c757d;
             line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .form-group {
