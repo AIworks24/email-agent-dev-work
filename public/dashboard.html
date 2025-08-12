@@ -140,9 +140,88 @@
             border-radius: 8px;
             padding: 1rem;
             min-height: 150px;
-            white-space: pre-wrap;
             font-family: inherit;
             margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        /* Markdown formatting styles */
+        .response-area h1, .response-area h2, .response-area h3 {
+            color: #333;
+            margin: 1rem 0 0.5rem 0;
+            font-weight: 600;
+        }
+
+        .response-area h1 {
+            font-size: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.25rem;
+        }
+
+        .response-area h2 {
+            font-size: 1.3rem;
+            color: #667eea;
+            margin-top: 1.5rem;
+        }
+
+        .response-area h3 {
+            font-size: 1.1rem;
+            color: #495057;
+        }
+
+        .response-area strong {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .response-area ul, .response-area ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .response-area li {
+            margin: 0.25rem 0;
+        }
+
+        .response-area code {
+            background: #e9ecef;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .response-area blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            background: rgba(102, 126, 234, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .response-area .highlight-box {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .response-area .info-box {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .response-area .warning-box {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
         }
 
         .email-response-preview {
@@ -679,7 +758,73 @@
             }
         }
 
-        async function processQuery() {
+        // Utility function to format markdown-style text into HTML
+        function formatMarkdownResponse(text) {
+            // First, clean up any JSON from the response
+            const cleanText = removeJsonFromResponse(text);
+            
+            let html = cleanText;
+            
+            // Convert headers
+            html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+            
+            // Convert bold text
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Convert bullet points
+            html = html.replace(/^[-•] (.*$)/gm, '<li>$1</li>');
+            
+            // Wrap consecutive li elements in ul
+            html = html.replace(/(<li>.*<\/li>)/gs, function(match) {
+                return '<ul>' + match + '</ul>';
+            });
+            
+            // Convert line breaks to <br> but preserve structure
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = '<p>' + html + '</p>';
+            
+            // Clean up empty paragraphs and fix nested lists
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p>(<h[1-3]>)/g, '$1');
+            html = html.replace(/(<\/h[1-3]>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<ul>)/g, '$1');
+            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+            
+            // Add special styling for certain sections
+            html = html.replace(/(<h2>Meeting Detection<\/h2>)/g, '<div class="highlight-box">$1');
+            html = html.replace(/(<h2>Specific Recommendations<\/h2>)/g, '</div><div class="info-box">$1');
+            html = html.replace(/(<h2>Action Items<\/h2>)/g, '</div><div class="warning-box">$1');
+            
+            // Close any open divs at the end
+            if (html.includes('highlight-box') || html.includes('info-box') || html.includes('warning-box')) {
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        // Function to remove JSON from AI response
+        function removeJsonFromResponse(text) {
+            // Remove JSON objects that start with { and contain "meetingDetected"
+            const jsonPattern = /\{[\s\S]*?"meetingDetected"[\s\S]*?\}/g;
+            return text.replace(jsonPattern, '').trim();
+        }
+
+        // Function to extract JSON from AI response
+        function extractJsonFromResponse(text) {
+            const jsonMatch = text.match(/\{[\s\S]*?"meetingDetected"[\s\S]*?\}/);
+            if (jsonMatch) {
+                try {
+                    return JSON.parse(jsonMatch[0]);
+                } catch (e) {
+                    console.log('Could not parse meeting JSON:', e);
+                    return null;
+                }
+            }
+            return null;
+        }
             const query = document.getElementById('query').value.trim();
             if (!query) {
                 alert('Please enter a question');
@@ -721,39 +866,39 @@
 
         async function loadEmailSummary() {
             const responseArea = document.getElementById('response');
-            responseArea.textContent = 'Generating email summary...';
+            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Generating email summary...</div>';
 
             try {
                 const response = await fetch('/api/emails/summary/daily?days=1');
                 if (response.ok) {
                     const data = await response.json();
-                    responseArea.textContent = `Email Summary for Today:\n\n${data.summary}`;
+                    responseArea.innerHTML = formatMarkdownResponse(`# Email Summary for Today\n\n${data.summary}`);
                 } else {
                     const errorData = await response.json();
-                    responseArea.textContent = `Error: ${errorData.message || 'Failed to generate summary'}`;
+                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to generate summary'}</div>`;
                 }
             } catch (error) {
                 console.error('Error loading email summary:', error);
-                responseArea.textContent = 'Error: Failed to generate email summary';
+                responseArea.innerHTML = '<div class="error">Error: Failed to generate email summary</div>';
             }
         }
 
         async function loadTodaySchedule() {
             const responseArea = document.getElementById('response');
-            responseArea.textContent = 'Loading today\'s schedule...';
+            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Loading today\'s schedule...</div>';
 
             try {
                 const response = await fetch('/api/calendar/today');
                 if (response.ok) {
                     const data = await response.json();
-                    responseArea.textContent = `Today's Schedule (${data.date}):\n\n${data.summary}`;
+                    responseArea.innerHTML = formatMarkdownResponse(`# Today's Schedule (${data.date})\n\n${data.summary}`);
                 } else {
                     const errorData = await response.json();
-                    responseArea.textContent = `Error: ${errorData.message || 'Failed to load schedule'}`;
+                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to load schedule'}</div>`;
                 }
             } catch (error) {
                 console.error('Error loading today\'s schedule:', error);
-                responseArea.textContent = 'Error: Failed to load today\'s schedule';
+                responseArea.innerHTML = '<div class="error">Error: Failed to load today\'s schedule</div>';
             }
         }
 
@@ -1089,7 +1234,7 @@
             }
 
             const responseArea = document.getElementById('calendar-response');
-            responseArea.textContent = 'Analyzing your calendar and detecting meeting opportunities...';
+            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Analyzing your calendar and detecting meeting opportunities...</div>';
 
             try {
                 // Check if we have a selected email for context
@@ -1121,20 +1266,25 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Display the analysis
-                    responseArea.innerHTML = `<div style="white-space: pre-wrap;">${data.analysis}</div>`;
+                    // Extract JSON from response text and clean it
+                    const meetingData = extractJsonFromResponse(data.analysis);
+                    const cleanedAnalysis = removeJsonFromResponse(data.analysis);
                     
-                    // Check if a meeting was detected
-                    if (data.meetingData && data.meetingData.meetingDetected) {
-                        showMeetingSuggestion(data.meetingData.meetingDetails);
+                    // Display the formatted analysis
+                    responseArea.innerHTML = formatMarkdownResponse(cleanedAnalysis);
+                    
+                    // Check if a meeting was detected - use extracted JSON first, then fallback to data.meetingData
+                    const finalMeetingData = meetingData || data.meetingData;
+                    if (finalMeetingData && finalMeetingData.meetingDetected) {
+                        showMeetingSuggestion(finalMeetingData.meetingDetails || finalMeetingData);
                     }
                 } else {
                     const errorData = await response.json();
-                    responseArea.textContent = `Error: ${errorData.message || 'Failed to analyze calendar'}`;
+                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to analyze calendar'}</div>`;
                 }
             } catch (error) {
                 console.error('Error analyzing calendar:', error);
-                responseArea.textContent = 'Error: Failed to analyze calendar';
+                responseArea.innerHTML = '<div class="error">Error: Failed to analyze calendar</div>';
             }
         }
 
@@ -1150,16 +1300,16 @@
             `;
             
             // Format suggested times
-            const timeOptions = meetingDetails.suggestedTimes.map((time, index) => 
+            const timeOptions = meetingDetails.suggestedTimes ? meetingDetails.suggestedTimes.map((time, index) => 
                 `<option value="${time.date}T${time.time}">${time.label}</option>`
-            ).join('');
+            ).join('') : '<option value="">No suggested times available</option>';
             
             suggestionDiv.innerHTML = `
                 <h4 style="color: #2e7d32; margin: 0 0 1rem 0;">🤖 AI Meeting Suggestion Detected!</h4>
                 <div style="background: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
                     <p><strong>Meeting:</strong> ${meetingDetails.title}</p>
                     <p><strong>Duration:</strong> ${meetingDetails.duration} minutes</p>
-                    <p><strong>Attendees:</strong> ${meetingDetails.attendees.join(', ')}</p>
+                    <p><strong>Attendees:</strong> ${meetingDetails.attendees ? meetingDetails.attendees.join(', ') : 'No attendees specified'}</p>
                     <p><strong>Type:</strong> ${meetingDetails.meetingType}</p>
                     <p><strong>Priority:</strong> ${meetingDetails.priority}</p>
                     <p><strong>Description:</strong> ${meetingDetails.description}</p>
@@ -1196,7 +1346,7 @@
                     </div>
                 </div>
                 
-                <div style="display: flex; gap: 1rem;">
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                     <button onclick="createSuggestedMeeting()" class="btn btn-success">
                         📅 Create Meeting Invite
                     </button>
@@ -1204,13 +1354,24 @@
                         ✏️ Customize Details
                     </button>
                     <button onclick="dismissSuggestion()" class="btn btn-secondary">
-                        ❌ Dismiss
+                        ❌ Cancel Request
                     </button>
                 </div>
             `;
             
-            // Add to calendar response area
-            document.getElementById('calendar-response').appendChild(suggestionDiv);
+            // Determine which container to append to
+            let containerElement;
+            if (document.getElementById('calendar-response').contains(document.activeElement) || 
+                document.getElementById('calendar-query').value.trim() !== '') {
+                // If we're in the calendar section, add to calendar response
+                containerElement = document.getElementById('calendar-response');
+            } else {
+                // Otherwise, add to the main response area (Ask Your Email Assistant)
+                containerElement = document.getElementById('response');
+            }
+            
+            // Add to the appropriate container
+            containerElement.appendChild(suggestionDiv);
             
             // Add event listener for custom time selection
             document.getElementById('suggested-time').addEventListener('change', function() {
@@ -1321,6 +1482,13 @@
             if (suggestion) {
                 suggestion.remove();
             }
+            window.suggestedMeetingDetails = null;
+        }
+
+        // Function to clear all meeting suggestions from any section
+        function clearAllMeetingSuggestions() {
+            const suggestions = document.querySelectorAll('#meeting-suggestion');
+            suggestions.forEach(suggestion => suggestion.remove());
             window.suggestedMeetingDetails = null;
         }
 
