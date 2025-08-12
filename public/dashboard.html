@@ -649,9 +649,14 @@
                     <textarea id="meeting-agenda" placeholder="Meeting agenda and objectives..."></textarea>
                 </div>
                 
-                <button class="btn btn-success" onclick="createMeetingInvite()">
-                    Create Meeting Invite
-                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-success" onclick="createMeetingInvite()">
+                        Create Meeting Invite
+                    </button>
+                    <button class="btn btn-secondary" onclick="hideMeetingForm()">
+                        Cancel
+                    </button>
+                </div>
             </div>
             
             <div class="quick-actions">
@@ -730,11 +735,24 @@
             return html;
         }
 
-        // Function to remove JSON from AI response
+        // Function to remove JSON from AI response - Enhanced version
         function removeJsonFromResponse(text) {
             // Remove JSON objects that start with { and contain "meetingDetected"
-            const jsonPattern = /\{[\s\S]*?"meetingDetected"[\s\S]*?\}/g;
-            return text.replace(jsonPattern, '').trim();
+            let cleanText = text.replace(/\{[\s\S]*?"meetingDetected"[\s\S]*?\}/g, '').trim();
+            
+            // Remove any remaining JSON code blocks (```json ... ```)
+            cleanText = cleanText.replace(/```json[\s\S]*?```/g, '').trim();
+            
+            // Remove any standalone JSON fragments that might remain
+            cleanText = cleanText.replace(/```[\s\S]*?```/g, '').trim();
+            
+            // Remove trailing commas and brackets that might be left over
+            cleanText = cleanText.replace(/[,\s]*\]\s*,\s*"priority":\s*"[^"]*"\s*\}\s*\}\s*$/g, '').trim();
+            
+            // Remove any remaining JSON-like fragments at the end
+            cleanText = cleanText.replace(/[,\s]*\{\s*"[^}]*\}\s*$/g, '').trim();
+            
+            return cleanText;
         }
 
         // Function to extract JSON from AI response
@@ -1474,6 +1492,17 @@
             updateLocationForMeetingType();
         }
 
+        function hideMeetingForm() {
+            document.getElementById('meeting-form').classList.add('hidden');
+            
+            // Clear form fields
+            document.getElementById('meeting-title').value = '';
+            document.getElementById('meeting-attendees').value = '';
+            document.getElementById('meeting-location').value = '';
+            document.getElementById('meeting-agenda').value = '';
+            document.getElementById('meeting-type-select').value = 'in-person';
+        }
+
         async function createMeetingInvite() {
             const title = document.getElementById('meeting-title').value.trim();
             const startTime = document.getElementById('meeting-start').value;
@@ -1519,11 +1548,8 @@
                     
                     alert(successMessage);
                     
-                    document.getElementById('meeting-title').value = '';
-                    document.getElementById('meeting-attendees').value = '';
-                    document.getElementById('meeting-location').value = '';
-                    document.getElementById('meeting-agenda').value = '';
-                    document.getElementById('meeting-form').classList.add('hidden');
+                    // Clear and hide form
+                    hideMeetingForm();
                     
                     loadCalendarStats();
                 } else {
