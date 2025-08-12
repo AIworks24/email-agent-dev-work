@@ -4,6 +4,24 @@ class ClaudeAIService {
     constructor() {
         this.apiKey = process.env.ANTHROPIC_API_KEY;
         this.baseURL = 'https://api.anthropic.com/v1/messages';
+        this.userTimezone = 'America/New_York'; // Make this configurable later
+    }
+
+    getCurrentTimeContext() {
+        const now = new Date();
+        const estTime = now.toLocaleString('en-US', {
+            timeZone: this.userTimezone,
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZoneName: 'short'
+        });
+        
+        return `Current time: ${estTime}`;
     }
 
     async processEmailQuery(query, emailData, calendarData = null) {
@@ -32,7 +50,9 @@ class ClaudeAIService {
     }
 
     buildEmailQueryPrompt(query, emailData, calendarData) {
-        let prompt = `You are an AI assistant helping to manage Microsoft 365 emails and calendar. Provide helpful, concise responses.
+        let prompt = `You are an AI assistant helping to manage Microsoft 365 emails and calendar. 
+
+${this.getCurrentTimeContext()}
 
 User Query: ${query}
 
@@ -40,11 +60,11 @@ Recent Email Data:
 ${this.formatEmailsForPrompt(emailData)}`;
 
         if (calendarData && calendarData.length > 0) {
-            prompt += `\n\nUpcoming Calendar Events:
+            prompt += `\n\nUpcoming Calendar Events (times in Eastern Time):
 ${this.formatCalendarForPrompt(calendarData)}`;
         }
 
-        prompt += `\n\nProvide a helpful response to the user's query. Be specific and actionable.`;
+        prompt += `\n\nProvide a helpful response to the user's query. When mentioning times, always specify they are in Eastern Time (EST/EDT). Be specific and actionable.`;
 
         return prompt;
     }
@@ -57,13 +77,23 @@ ${this.formatCalendarForPrompt(calendarData)}`;
         return emails.slice(0, 20).map((email, index) => {
             const from = email.from?.emailAddress?.address || 'Unknown sender';
             const name = email.from?.emailAddress?.name || '';
-            const date = new Date(email.receivedDateTime).toLocaleDateString();
-            const time = new Date(email.receivedDateTime).toLocaleTimeString();
+            
+            // Format date in Eastern Time
+            const date = new Date(email.receivedDateTime).toLocaleDateString('en-US', {
+                timeZone: this.userTimezone
+            });
+            const time = new Date(email.receivedDateTime).toLocaleTimeString('en-US', {
+                timeZone: this.userTimezone,
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            
             const preview = email.bodyPreview?.substring(0, 100) || 'No preview';
             
             return `${index + 1}. From: ${name} <${from}>
    Subject: ${email.subject}
-   Date: ${date} ${time}
+   Date: ${date} ${time} EST
    Read: ${email.isRead ? 'Yes' : 'No'}
    Preview: ${preview}...`;
         }).join('\n\n');
@@ -75,19 +105,39 @@ ${this.formatCalendarForPrompt(calendarData)}`;
         }
 
         return events.slice(0, 10).map((event, index) => {
-            const start = new Date(event.start.dateTime).toLocaleString();
-            const end = new Date(event.end.dateTime).toLocaleString();
+            // Format times in Eastern Time
+            const start = new Date(event.start.dateTime).toLocaleString('en-US', {
+                timeZone: this.userTimezone,
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            const end = new Date(event.end.dateTime).toLocaleString('en-US', {
+                timeZone: this.userTimezone,
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            
             const location = event.location?.displayName || 'No location';
             
             return `${index + 1}. ${event.subject}
-   Start: ${start}
-   End: ${end}
+   Start: ${start} EST
+   End: ${end} EST
    Location: ${location}`;
         }).join('\n\n');
     }
 
     async generateEmailResponse(originalEmail, context = '', tone = 'professional') {
-        const prompt = `Generate a ${tone} email response to the following email:
+        // Include current time context
+        const timeContext = this.getCurrentTimeContext();
+        
+        const prompt = `${timeContext}
+
+Generate a ${tone} email response to the following email:
 
 Original Email:
 From: ${originalEmail.from?.emailAddress?.name} <${originalEmail.from?.emailAddress?.address}>
@@ -101,6 +151,7 @@ Generate an appropriate response that:
 - Maintains a ${tone} tone
 - Is concise but complete
 - Includes a proper greeting and closing
+- If scheduling is mentioned, reference Eastern Time
 
 Return only the email content without subject line.`;
 
