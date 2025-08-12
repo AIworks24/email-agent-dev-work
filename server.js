@@ -254,6 +254,9 @@ app.get('/api/calendar/events', async (req, res) => {
         const graphClient = createGraphClient(accessToken);
         
         const { days = 7 } = req.query;
+        
+        // Get current time in user's timezone (you can make this configurable)
+        const userTimezone = 'America/New_York'; // EST/EDT
         const startDate = new Date();
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + parseInt(days));
@@ -261,13 +264,28 @@ app.get('/api/calendar/events', async (req, res) => {
         const events = await graphClient
             .api('/me/events')
             .filter(`start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`)
+            .select('id,subject,start,end,location,attendees,importance,showAs,organizer')
+            .header('Prefer', `outlook.timezone="${userTimezone}"`) // This tells Graph API to return times in EST/EDT
+            .orderby('start/dateTime')
             .top(50)
             .get();
         
         res.json({
             success: true,
             count: events.value.length,
-            events: events.value
+            events: events.value.map(event => ({
+                ...event,
+                // Ensure we have proper timezone info
+                start: {
+                    ...event.start,
+                    timeZone: userTimezone
+                },
+                end: {
+                    ...event.end,
+                    timeZone: userTimezone
+                }
+            })),
+            timezone: userTimezone
         });
     } catch (error) {
         console.error('Error fetching calendar:', error);
@@ -284,21 +302,57 @@ app.get('/api/calendar/today', async (req, res) => {
     try {
         const graphClient = createGraphClient(accessToken);
         
+        const userTimezone = 'America/New_York';
+        
+        // Create today's date range in user's timezone
         const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+        const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
         const events = await graphClient
             .api('/me/events')
-            .filter(`start/dateTime ge '${today.toISOString()}' and start/dateTime lt '${tomorrow.toISOString()}'`)
+            .filter(`start/dateTime ge '${todayStart.toISOString()}' and start/dateTime lt '${todayEnd.toISOString()}'`)
+            .select('id,subject,start,end,location,attendees,importance,showAs,organizer')
+            .header('Prefer', `outlook.timezone="${userTimezone}"`)
+            .orderby('start/dateTime')
             .get();
+        
+        // Format events with proper timezone display
+        const formattedEvents = events.value.map(event => {
+            const startTime = new Date(event.start.dateTime);
+            const endTime = new Date(event.end.dateTime);
+            
+            return {
+                ...event,
+                displayTime: `${startTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: userTimezone
+                })} - ${endTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: userTimezone
+                })}`,
+                start: {
+                    ...event.start,
+                    timeZone: userTimezone
+                },
+                end: {
+                    ...event.end,
+                    timeZone: userTimezone
+                }
+            };
+        });
         
         res.json({
             success: true,
-            date: today.toDateString(),
-            eventCount: events.value.length,
-            events: events.value,
-            summary: `You have ${events.value.length} meetings today.`
+            date: today.toLocaleDateString('en-US', { timeZone: userTimezone }),
+            eventCount: formattedEvents.length,
+            events: formattedEvents,
+            summary: `You have ${formattedEvents.length} meetings today.`,
+            timezone: userTimezone
         });
     } catch (error) {
         console.error('Error fetching today schedule:', error);
@@ -764,6 +818,7 @@ app.post('/api/calendar/create-invite', async (req, res) => {
         }
         
         const graphClient = createGraphClient(accessToken);
+        const userTimezone = 'America/New_York';
         
         // Prepare meeting location based on type
         let meetingLocation = location;
@@ -781,12 +836,12 @@ app.post('/api/calendar/create-invite', async (req, res) => {
         const event = {
             subject: title,
             start: {
-                dateTime: startTime,
-                timeZone: 'UTC'
+                dateTime: new Date(startTime).toISOString(),
+                timeZone: userTimezone // Specify the user's timezone
             },
             end: {
-                dateTime: endTime,
-                timeZone: 'UTC'
+                dateTime: new Date(endTime).toISOString(),
+                timeZone: userTimezone // Specify the user's timezone
             },
             body: {
                 contentType: 'HTML',
@@ -815,7 +870,8 @@ app.post('/api/calendar/create-invite', async (req, res) => {
             message: 'Calendar invite created successfully',
             eventId: createdEvent.id,
             event: createdEvent,
-            meetingType: meetingType
+            meetingType: meetingType,
+            timezone: userTimezone
         });
         
     } catch (error) {
@@ -824,65 +880,6 @@ app.post('/api/calendar/create-invite', async (req, res) => {
             error: 'Failed to create calendar invite', 
             message: error.message 
         });
-    }
-});
-
-// Create calendar invite
-app.post('/api/calendar/create-invite', async (req, res) => {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    try {
-        const { title, startTime, endTime, attendees, agenda, location } = req.body;
-        
-        if (!title || !startTime || !endTime) {
-            return res.status(400).json({ error: 'Title, start time, and end time are required' });
-        }
-        
-        const graphClient = createGraphClient(accessToken);
-        
-        const event = {
-            subject: title,
-            start: {
-                dateTime: startTime,
-                timeZone: 'UTC'
-            },
-            end: {
-                dateTime: endTime,
-                timeZone: 'UTC'
-            },
-            body: {
-                contentType: 'HTML',
-                content: agenda || 'Meeting agenda to be determined.'
-            },
-            location: location ? {
-                displayName: location
-            } : undefined,
-            attendees: attendees ? attendees.map(email => ({
-                emailAddress: {
-                    address: email,
-                    name: email
-                },
-                type: 'required'
-            })) : []
-        };
-
-        const createdEvent = await graphClient
-            .api('/me/events')
-            .post(event);
-        
-        res.json({
-            success: true,
-            message: 'Calendar invite created successfully',
-            eventId: createdEvent.id,
-            event: createdEvent
-        });
-        
-    } catch (error) {
-        console.error('Error creating calendar invite:', error);
-        res.status(500).json({ error: 'Failed to create calendar invite', message: error.message });
     }
 });
 
