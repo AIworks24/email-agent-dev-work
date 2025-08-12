@@ -682,8 +682,6 @@ app.post('/api/emails/:emailId/send', async (req, res) => {
     }
 });
 
-// Replace the existing /api/calendar/analyze endpoint in your server.js with this enhanced version:
-
 app.post('/api/calendar/analyze', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -691,27 +689,61 @@ app.post('/api/calendar/analyze', async (req, res) => {
     }
     
     try {
-        const { query, emailContext } = req.body; // emailContext can include selected email data
+        const { query, emailContext } = req.body;
         const graphClient = createGraphClient(accessToken);
         const axios = require('axios');
+        const userTimezone = 'America/New_York';
+        
+        // Get current time context
+        const currentTime = new Date().toLocaleString('en-US', {
+            timeZone: userTimezone,
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZoneName: 'short'
+        });
         
         // Get recent emails and calendar events for context
         const [emails, events, userProfile] = await Promise.all([
             graphClient.api('/me/messages').top(20).select('id,subject,from,receivedDateTime,bodyPreview,body').get(),
-            graphClient.api('/me/events').filter(`start/dateTime ge '${new Date().toISOString()}'`).top(20).get(),
+            graphClient.api('/me/events')
+                .filter(`start/dateTime ge '${new Date().toISOString()}'`)
+                .header('Prefer', `outlook.timezone="${userTimezone}"`)
+                .top(20).get(),
             graphClient.api('/me').select('mail,displayName').get()
         ]);
 
-        const emailSummary = emails.value.map(email => 
-            `${email.subject} from ${email.from?.emailAddress?.name} - ${email.bodyPreview?.substring(0, 100)}`
-        ).join('\n');
+        const emailSummary = emails.value.map(email => {
+            const emailTime = new Date(email.receivedDateTime).toLocaleString('en-US', {
+                timeZone: userTimezone,
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            return `${email.subject} from ${email.from?.emailAddress?.name} (${emailTime} EST) - ${email.bodyPreview?.substring(0, 100)}`;
+        }).join('\n');
 
-        const eventSummary = events.value.map(event => 
-            `${event.subject} - ${new Date(event.start.dateTime).toLocaleString()}`
-        ).join('\n');
+        const eventSummary = events.value.map(event => {
+            const eventTime = new Date(event.start.dateTime).toLocaleString('en-US', {
+                timeZone: userTimezone,
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            return `${event.subject} - ${eventTime} EST`;
+        }).join('\n');
 
-        // Enhanced prompt for smart meeting detection
-        const prompt = `You are an AI calendar assistant with meeting detection capabilities. Analyze the user's request and current schedule to provide recommendations.
+        // Enhanced prompt with better timezone awareness
+        const prompt = `You are an AI calendar assistant with advanced meeting detection capabilities. Current time: ${currentTime}
 
 User Request: ${query}
 
@@ -722,13 +754,15 @@ Subject: ${emailContext.subject}
 Content: ${emailContext.content}
 ` : ''}
 
-Recent Emails:
+Recent Emails (with EST times):
 ${emailSummary}
 
-Upcoming Calendar Events:
+Upcoming Calendar Events (in EST):
 ${eventSummary}
 
 Current User: ${userProfile.displayName} (${userProfile.mail})
+
+IMPORTANT: All times should be referenced in Eastern Time (EST/EDT). When suggesting meeting times, always specify EST.
 
 Based on this information, provide:
 
@@ -737,9 +771,9 @@ Based on this information, provide:
    - Meeting purpose and type
    - Suggested attendees (include original email sender if from email context)
    - Recommended duration
-   - Best time slots this week or next week
+   - Best time slots this week or next week (in EST)
    - Whether it should be virtual (Teams/Zoom) or in-person
-3. **Specific Recommendations**: Provide actionable scheduling suggestions
+3. **Specific Recommendations**: Provide actionable scheduling suggestions with EST times
 4. **JSON Meeting Suggestion**: If appropriate, provide a JSON object with meeting details
 
 If you detect a meeting should be scheduled, end your response with a JSON object in this exact format:
@@ -752,14 +786,16 @@ If you detect a meeting should be scheduled, end your response with a JSON objec
     "description": "Meeting purpose and agenda",
     "meetingType": "teams|zoom|in-person",
     "suggestedTimes": [
-      {"date": "2025-01-15", "time": "14:00", "label": "Today 2:00 PM"},
-      {"date": "2025-01-16", "time": "10:00", "label": "Tomorrow 10:00 AM"}
+      {"date": "2025-01-15", "time": "14:00", "label": "Today 2:00 PM EST"},
+      {"date": "2025-01-16", "time": "10:00", "label": "Tomorrow 10:00 AM EST"}
     ],
     "priority": "high|medium|low"
   }
 }
 
-If no meeting is detected, set "meetingDetected": false.`;
+If no meeting is detected, set "meetingDetected": false.
+
+Remember: All suggested times must be in Eastern Time and clearly labeled as EST.`;
 
         const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
             model: 'claude-sonnet-4-20250514',
@@ -781,6 +817,13 @@ If no meeting is detected, set "meetingDetected": false.`;
         if (jsonMatch) {
             try {
                 meetingData = JSON.parse(jsonMatch[0]);
+                // Ensure all suggested times include timezone info
+                if (meetingData.meetingDetails && meetingData.meetingDetails.suggestedTimes) {
+                    meetingData.meetingDetails.suggestedTimes = meetingData.meetingDetails.suggestedTimes.map(time => ({
+                        ...time,
+                        timezone: 'America/New_York'
+                    }));
+                }
             } catch (e) {
                 console.log('Could not parse meeting JSON:', e);
             }
@@ -791,7 +834,9 @@ If no meeting is detected, set "meetingDetected": false.`;
             analysis: responseText,
             meetingData: meetingData,
             emailCount: emails.value.length,
-            eventCount: events.value.length
+            eventCount: events.value.length,
+            currentTime: currentTime,
+            timezone: userTimezone
         });
         
     } catch (error) {
