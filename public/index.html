@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Email Agent</title>
+    <title>AI Email Agent - Intelligent Microsoft 365 Assistant</title>
     <style>
         * {
             margin: 0;
@@ -15,207 +15,519 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Header */
+        .header {
+            position: relative;
+            z-index: 10;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-logo {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 0.5rem;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 4rem 2rem;
             color: white;
         }
-        
-        .container {
-            text-align: center;
-            max-width: 600px;
-            padding: 2rem;
+
+        .logo-container {
+            margin-bottom: 2rem;
+            position: relative;
         }
-        
-        .logo {
-            font-size: 3rem;
+
+        .main-logo {
+            font-size: 6rem;
             margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+            position: relative;
+            display: inline-block;
         }
-        
-        h1 {
-            font-size: 2.5rem;
+
+        .logo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes glow {
+            from { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
             margin-bottom: 1rem;
             font-weight: 300;
+            background: linear-gradient(45deg, #fff, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
+
+        .hero-subtitle {
+            font-size: 1.4rem;
+            margin-bottom: 3rem;
+            opacity: 0.95;
             line-height: 1.6;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin: 2rem 0;
-        }
-        
-        .feature {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1.5rem;
-            border-radius: 10px;
+
+        /* Features Grid */
+        .features-section {
+            position: relative;
+            z-index: 10;
+            padding: 4rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
         }
-        
-        .feature h3 {
-            margin-bottom: 0.5rem;
-            color: #ffd700;
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        
-        .cta-button {
-            display: inline-block;
-            background: #4CAF50;
+
+        .features-title {
+            text-align: center;
             color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 25px;
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin-top: 2rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            font-weight: 300;
         }
-        
-        .cta-button:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
         }
-        
-        .status {
-            margin-top: 2rem;
-            padding: 1rem;
+
+        .feature-card {
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+            padding: 2rem;
+            border-radius: 20px;
             backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .feature-card:hover::before {
+            left: 100%;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .feature-card h3 {
+            color: #ffd700;
+            margin-bottom: 1rem;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: white;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            transition: all 0.4s ease;
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .cta-button:hover::before {
+            left: 100%;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(76, 175, 80, 0.6);
+        }
+
+        /* Status Section */
+        .status-section {
+            position: relative;
+            z-index: 10;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .status-card {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
         .status-indicator {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             background: #4CAF50;
             border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
+            margin-right: 10px;
+            animation: pulse-dot 2s infinite;
+            box-shadow: 0 0 10px #4CAF50;
         }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+
+        @keyframes pulse-dot {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
         }
-        
-        /* Enhanced Mobile Responsiveness */
-        @media (max-width: 768px) { 
-            h1 { 
-                font-size: 2rem; 
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
             }
-            .subtitle { 
-                font-size: 1rem; 
+            
+            .hero h1 {
+                font-size: 2.5rem;
             }
-            .container { 
-                padding: 1rem; 
-                margin: 1rem;
+            
+            .main-logo {
+                font-size: 4rem;
             }
-            .features {
+            
+            .hero-subtitle {
+                font-size: 1.1rem;
+                padding: 0 1rem;
+            }
+            
+            .features-grid {
                 grid-template-columns: 1fr;
-                gap: 1rem;
+                gap: 1.5rem;
             }
-            .feature {
-                padding: 1.25rem;
+            
+            .feature-card {
+                padding: 1.5rem;
             }
+            
             .cta-button {
-                padding: 16px 24px;
-                font-size: 1rem;
-                margin-top: 1.5rem;
+                padding: 16px 32px;
+                font-size: 1.1rem;
             }
         }
 
         @media (max-width: 480px) {
-            .logo {
-                font-size: 2.5rem;
+            .hero {
+                padding: 2rem 1rem;
             }
-            h1 {
-                font-size: 1.75rem;
+            
+            .main-logo {
+                font-size: 3rem;
             }
-            .subtitle {
-                font-size: 0.95rem;
-                line-height: 1.5;
+            
+            .hero h1 {
+                font-size: 2rem;
             }
-            .container {
-                padding: 0.75rem;
-                margin: 0.5rem;
-            }
-            .feature {
-                padding: 1rem;
-            }
-            .feature h3 {
+            
+            .hero-subtitle {
                 font-size: 1rem;
             }
-            .cta-button {
-                padding: 14px 20px;
-                font-size: 16px; /* Prevents zoom on iOS */
+            
+            .features-section {
+                padding: 2rem 1rem;
             }
-        }
-
-        /* Touch improvements */
-        .cta-button {
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-        
-        /* iOS safe area support */
-        @supports (padding: max(0px)) {
-            .container {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
-                padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            
+            .feature-card {
+                padding: 1.25rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">🤖📧</div>
+    <!-- Animated particles background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-logo">
+            <span>🤖</span>
+            <span>AI Email Agent</span>
+        </div>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+                <li><a href="#support">Support</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="logo-container">
+            <div class="logo-glow"></div>
+            <div class="main-logo">🤖📧</div>
+        </div>
         <h1>AI Email Agent</h1>
-        <p class="subtitle">
-            Your intelligent Microsoft 365 email assistant. Automate responses, 
-            summarize emails, and manage your calendar with the power of AI.
+        <p class="hero-subtitle">
+            Transform your Microsoft 365 experience with intelligent email management, 
+            smart calendar scheduling, and AI-powered responses that save you hours every day.
         </p>
         
-        <div class="features">
-            <div class="feature">
-                <h3>📊 Email Summaries</h3>
-                <p>Get intelligent daily summaries of your important emails</p>
-            </div>
-            <div class="feature">
-                <h3>🤖 Auto Responses</h3>
-                <p>Generate contextual, professional email responses automatically</p>
-            </div>
-            <div class="feature">
-                <h3>📅 Calendar Integration</h3>
-                <p>Smart scheduling assistance and meeting preparation</p>
-            </div>
-            <div class="feature">
-                <h3>🧹 Email Cleanup</h3>
-                <p>Organize and clean up your inbox with AI-powered automation</p>
-            </div>
-        </div>
-        
         <a href="/auth/login" class="cta-button">
+            <span>🚀</span>
             Connect Your Microsoft 365 Account
         </a>
-        
-        <div class="status">
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="features-container">
+            <h2 class="features-title">Powerful AI Features</h2>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">📊</span>
+                    <h3>Smart Email Analysis</h3>
+                    <p>Get AI-powered daily summaries, priority detection, and intelligent categorization of your emails with actionable insights.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🤖</span>
+                    <h3>Automated Responses</h3>
+                    <p>Generate contextual, professional email responses automatically with customizable tone and style preferences.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">📅</span>
+                    <h3>Intelligent Calendar</h3>
+                    <p>Smart scheduling assistance, conflict detection, meeting preparation, and automated calendar optimization.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🔍</span>
+                    <h3>Email Discovery</h3>
+                    <p>Natural language queries to find specific emails, track conversations, and organize your inbox efficiently.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">⚡</span>
+                    <h3>Meeting Detection</h3>
+                    <p>Automatically detects meeting requests in emails and suggests optimal scheduling with Teams/Zoom integration.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🛡️</span>
+                    <h3>Enterprise Security</h3>
+                    <p>Bank-level security with Microsoft 365 integration, OAuth authentication, and enterprise-grade data protection.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <h2 style="color: white; font-size: 2rem; margin-bottom: 1rem; font-weight: 300;">
+            Ready to revolutionize your email workflow?
+        </h2>
+        <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; margin-bottom: 2rem;">
+            Join thousands of professionals who've already transformed their productivity
+        </p>
+        <a href="/auth/login" class="cta-button">
+            <span>🚀</span>
+            Get Started Free
+        </a>
+    </section>
+
+    <!-- Status Section -->
+    <section class="status-section">
+        <div class="status-card">
             <span class="status-indicator"></span>
             <strong>System Status:</strong> <span id="status-text">Checking...</span>
         </div>
-    </div>
+    </section>
 
     <script>
+        // Create animated particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 50;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Random size and position
+                const size = Math.random() * 5 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
         // Check system health
         fetch('/health')
             .then(response => response.json())
@@ -227,6 +539,20 @@
                 document.getElementById('status-text').textContent = 'System offline';
                 console.error('Health check failed:', error);
             });
+
+        // Initialize particles on load
+        window.addEventListener('load', createParticles);
+
+        // Add parallax effect on scroll
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const particles = document.querySelectorAll('.particle');
+            
+            particles.forEach((particle, index) => {
+                const speed = 0.5 + (index % 3) * 0.2;
+                particle.style.transform = `translateY(${scrolled * speed}px)`;
+            });
+        });
     </script>
 </body>
 </html>
