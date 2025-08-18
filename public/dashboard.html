@@ -13,17 +13,23 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: #333;
+            min-height: 100vh;
         }
 
+        /* Header */
         .header {
-            background: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 1rem 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .logo {
@@ -31,7 +37,17 @@
             align-items: center;
             font-size: 1.5rem;
             font-weight: bold;
-            color: #667eea;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
 
         .user-info {
@@ -40,80 +56,311 @@
             gap: 1rem;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 2rem;
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        /* Main Layout */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            min-height: calc(100vh - 100px);
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 120px;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 1.5rem;
+            color: #667eea;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: #666;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: grid;
             gap: 2rem;
         }
 
-        .card {
+        /* Quick Stats Section */
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
             background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
 
-        .card h2 {
-            margin-bottom: 1rem;
-            color: #333;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 0.5rem;
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
         }
 
-        .query-section {
-            grid-column: 1 / -1;
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
-        .email-response-section, .calendar-analysis-section {
-            grid-column: 1 / -1;
-            margin-top: 1rem;
-        }
-
-        .query-input, .email-input, .calendar-input {
+        .stat-header {
             display: flex;
-            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 1rem;
         }
 
-        input[type="text"], input[type="email"], input[type="datetime-local"], select, textarea {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            font-size: 1rem;
+        .stat-icon {
+            font-size: 2rem;
+            padding: 0.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
         }
 
-        input[type="text"]:focus, input[type="email"]:focus, input[type="datetime-local"]:focus, select:focus, textarea:focus {
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #28a745;
+            margin-top: 0.5rem;
+        }
+
+        /* Content Sections */
+        .content-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-subtitle {
+            color: #666;
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .quick-action {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-action::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .quick-action:hover::before {
+            left: 100%;
+        }
+
+        .quick-action:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .quick-action-icon {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        textarea {
+        .form-textarea {
             min-height: 120px;
             resize: vertical;
         }
 
+        /* Buttons */
         .btn {
             padding: 12px 24px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 1rem;
             cursor: pointer;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5a6fd8;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
         }
 
         .btn-secondary {
@@ -121,249 +368,102 @@
             color: white;
         }
 
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
         .btn-success {
             background: #28a745;
             color: white;
         }
 
-        .btn-success:hover {
-            background: #218838;
+        .btn-outline {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
         }
 
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Response Areas */
         .response-area {
             background: #f8f9fa;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
-            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 1.5rem;
             min-height: 150px;
             font-family: inherit;
-            margin-bottom: 1rem;
+            margin: 1rem 0;
             line-height: 1.6;
+            position: relative;
         }
 
-        /* Markdown formatting styles */
-        .response-area h1, .response-area h2, .response-area h3 {
-            color: #333;
-            margin: 1rem 0 0.5rem 0;
-            font-weight: 600;
-        }
-
-        .response-area h1 {
-            font-size: 1.5rem;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 0.25rem;
-        }
-
-        .response-area h2 {
-            font-size: 1.3rem;
-            color: #667eea;
-            margin-top: 1.5rem;
-        }
-
-        .response-area h3 {
-            font-size: 1.1rem;
-            color: #495057;
-        }
-
-        .response-area strong {
-            color: #495057;
-            font-weight: 600;
-        }
-
-        .response-area ul, .response-area ol {
-            margin: 0.5rem 0;
-            padding-left: 1.5rem;
-        }
-
-        .response-area li {
-            margin: 0.25rem 0;
-        }
-
-        .response-area .highlight-box {
-            background: #e8f5e8;
-            border: 1px solid #4caf50;
-            border-radius: 6px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .response-area .info-box {
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            border-radius: 6px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .response-area .warning-box {
-            background: #fff3e0;
-            border: 1px solid #ff9800;
-            border-radius: 6px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .email-response-preview {
-            background: #f8f9fa;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-            display: none;
-        }
-
-        .email-response-preview.active {
-            display: block;
-        }
-
-        .email-meta {
-            background: #e9ecef;
-            padding: 0.5rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .quick-action {
-            padding: 1rem;
+        .response-area.loading::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
             background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: transform 0.2s ease;
+            animation: loading-bar 2s infinite;
         }
 
-        .quick-action:hover {
-            transform: translateY(-2px);
+        @keyframes loading-bar {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .stat {
-            text-align: center;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #6c757d;
-            margin-top: 0.5rem;
-        }
-
-        .loading {
-            text-align: center;
-            color: #6c757d;
-            font-style: italic;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
-
-        .logout-btn {
-            background: #dc3545;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-
-        .logout-btn:hover {
-            background: #c82333;
-        }
-
+        /* Email List */
         .email-list {
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
             margin: 1rem 0;
+            background: white;
         }
 
         .email-item {
-            padding: 1rem;
-            border-bottom: 1px solid #e1e5e9;
+            padding: 1.5rem;
+            border-bottom: 1px solid #f0f0f0;
             cursor: pointer;
-            transition: background 0.2s ease;
+            transition: all 0.3s ease;
             position: relative;
         }
 
         .email-item:hover {
             background: #f8f9fa;
+            transform: translateX(5px);
         }
 
         .email-item.selected {
-            background: #e3f2fd;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
             border-left: 4px solid #667eea;
         }
 
         .email-item.unread {
-            background: #f8f9ff;
-            border-left: 3px solid #667eea;
-        }
-
-        .email-item.unread .email-subject {
-            font-weight: 600;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 165, 0, 0.05));
+            border-left: 3px solid #ffa500;
         }
 
         .email-subject {
-            font-weight: 500;
-            margin-bottom: 0.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.5rem;
+            color: #333;
         }
 
         .email-from {
             font-size: 0.9rem;
-            color: #6c757d;
-            margin-bottom: 0.25rem;
+            color: #666;
+            margin-bottom: 0.5rem;
         }
 
         .email-preview {
             font-size: 0.85rem;
-            color: #6c757d;
+            color: #888;
             line-height: 1.4;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -371,14 +471,39 @@
             overflow: hidden;
         }
 
-        .form-group {
-            margin-bottom: 1rem;
+        .email-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #999;
         }
 
-        .form-group label {
+        /* Meeting Form */
+        .meeting-form {
+            background: #f8f9fa;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .meeting-form.active {
             display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .form-row {
@@ -387,17 +512,87 @@
             gap: 1rem;
         }
 
-        .hidden {
-            display: none;
+        /* Status Messages */
+        .status-message {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        /* Enhanced Mobile Responsiveness */
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 250px 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
-            .container {
+            .dashboard-container {
                 grid-template-columns: 1fr;
-                padding: 0 1rem;
-                margin: 1rem auto;
+                padding: 1rem;
                 gap: 1rem;
+            }
+            
+            .sidebar {
+                position: static;
+                padding: 1rem;
             }
             
             .header {
@@ -406,398 +601,624 @@
                 gap: 1rem;
             }
             
-            .query-input, .email-input, .calendar-input {
-                flex-direction: column;
+            .stats-section {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
             }
             
             .form-row {
                 grid-template-columns: 1fr;
             }
             
-            .card {
-                padding: 1rem;
-            }
-            
-            .quick-actions {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
-            }
-            
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 0.5rem;
-            }
-            
-            input[type="text"], input[type="email"], input[type="datetime-local"], select, textarea {
-                padding: 14px;
-                font-size: 16px;
-            }
-            
-            .btn {
-                padding: 14px 20px;
-                font-size: 16px;
+            .content-section {
+                padding: 1.5rem;
             }
         }
 
         @media (max-width: 480px) {
-            .container {
-                margin: 0.5rem auto;
-                padding: 0 0.5rem;
+            .dashboard-container {
+                padding: 0.5rem;
             }
             
-            .header {
-                padding: 0.75rem;
+            .content-section {
+                padding: 1rem;
+                margin-bottom: 1rem;
             }
             
-            .logo {
-                font-size: 1.2rem;
+            .stat-card {
+                padding: 1.5rem;
             }
             
-            .stats {
-                grid-template-columns: 1fr 1fr;
+            .quick-action {
+                padding: 1rem;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+                color: #e0e0e0;
+            }
+            
+            .sidebar, .content-section, .stat-card {
+                background: #2a2a2a;
+                color: #e0e0e0;
+            }
+            
+            .form-input, .form-select, .form-textarea {
+                background: #3a3a3a;
+                border-color: #4a4a4a;
+                color: #e0e0e0;
+            }
+            
+            .response-area {
+                background: #3a3a3a;
+                border-color: #4a4a4a;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Header -->
     <div class="header">
         <div class="logo">
-            🤖📧 AI Email Agent
+            <span class="logo-icon">🤖📧</span>
+            <span>AI Email Agent</span>
         </div>
         <div class="user-info">
+            <div class="user-avatar">👤</div>
             <span id="user-name">Loading...</span>
             <a href="/auth/logout" class="logout-btn">Logout</a>
         </div>
     </div>
 
-    <div class="container">
-        <!-- AI Query Section -->
-        <div class="card query-section">
-            <h2>Ask Your Email Assistant</h2>
-            <div class="query-input">
-                <input type="text" id="query" placeholder="Ask about your emails... (e.g., 'Summarize today's emails')" />
-                <button class="btn btn-primary" onclick="processQuery()">Ask AI</button>
-            </div>
-            <div class="response-area" id="response">
-                Ask me anything about your emails and calendar! Try:
-                • "Summarize my emails from today"
-                • "What meetings do I have this week?"
-                • "Show me unread emails from important senders"
-                • "Help me clean up my inbox"
-            </div>
-            
-            <div class="quick-actions">
-                <button class="quick-action" onclick="quickQuery('Summarize my emails from today')">
-                    📊 Today's Summary
-                </button>
-                <button class="quick-action" onclick="quickQuery('What meetings do I have this week?')">
-                    📅 This Week's Calendar
-                </button>
-                <button class="quick-action" onclick="quickQuery('Show me my unread emails')">
-                    ✉️ Unread Emails
-                </button>
-                <button class="quick-action" onclick="quickQuery('Check my availability tomorrow')">
-                    🕒 Tomorrow's Availability
-                </button>
-            </div>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <h3>Navigation</h3>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" onclick="showSection('overview')">
+                        <span class="nav-icon">📊</span>
+                        <span>Overview</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('email-analyzer')">
+                        <span class="nav-icon">🔍</span>
+                        <span>Email Analyzer</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('email-responder')">
+                        <span class="nav-icon">✍️</span>
+                        <span>Email Responder</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('calendar-manager')">
+                        <span class="nav-icon">📅</span>
+                        <span>Calendar Manager</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('ai-assistant')">
+                        <span class="nav-icon">🤖</span>
+                        <span>AI Assistant</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('settings')">
+                        <span class="nav-icon">⚙️</span>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
         </div>
 
-        <!-- Email Overview -->
-        <div class="card">
-            <h2>Email Overview</h2>
-            <div class="stats" id="email-stats">
-                <div class="stat">
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Quick Stats -->
+            <div class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">📧</div>
+                    </div>
                     <div class="stat-value" id="total-emails">-</div>
-                    <div class="stat-label">Total Today</div>
+                    <div class="stat-label">Total Emails Today</div>
+                    <div class="stat-trend">
+                        <span>📈</span>
+                        <span>+12% from yesterday</span>
+                    </div>
                 </div>
-                <div class="stat">
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">📬</div>
+                    </div>
                     <div class="stat-value" id="unread-emails">-</div>
-                    <div class="stat-label">Unread</div>
+                    <div class="stat-label">Unread Emails</div>
+                    <div class="stat-trend">
+                        <span>📉</span>
+                        <span>-5% from yesterday</span>
+                    </div>
                 </div>
-            </div>
-            <button class="btn btn-secondary" onclick="loadEmailSummary()" style="width: 100%;">
-                Get Detailed Summary
-            </button>
-        </div>
-
-        <!-- Calendar Overview -->
-        <div class="card">
-            <h2>Calendar Overview</h2>
-            <div class="stats" id="calendar-stats">
-                <div class="stat">
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">📅</div>
+                    </div>
                     <div class="stat-value" id="today-meetings">-</div>
                     <div class="stat-label">Today's Meetings</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="week-meetings">-</div>
-                    <div class="stat-label">This Week</div>
-                </div>
-            </div>
-            <button class="btn btn-secondary" onclick="loadTodaySchedule()" style="width: 100%;">
-                View Today's Schedule
-            </button>
-        </div>
-
-        <!-- AI Email Response Section -->
-        <div class="card email-response-section">
-            <h2>🤖 AI Email Response Generator</h2>
-            <p style="margin-bottom: 1rem; color: #6c757d;">Select an email below to generate an AI-powered response</p>
-            
-            <button class="btn btn-primary" onclick="loadEmails()" style="margin-bottom: 1rem;">
-                Load Recent Emails
-            </button>
-            
-            <div id="email-list" class="email-list" style="display: none;"></div>
-            
-            <div id="email-response-form" class="hidden">
-                <div class="form-group">
-                    <label for="response-context">Additional Context (optional):</label>
-                    <textarea id="response-context" placeholder="Any additional context or specific points you want to address..."></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="response-tone">Response Tone:</label>
-                    <select id="response-tone">
-                        <option value="professional">Professional</option>
-                        <option value="friendly">Friendly</option>
-                        <option value="formal">Formal</option>
-                        <option value="casual">Casual</option>
-                    </select>
-                </div>
-                
-                <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn btn-primary" onclick="generateEmailResponse()">
-                        Generate AI Response
-                    </button>
-                    <button class="btn btn-secondary" onclick="cancelEmailResponse()">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-            
-            <div id="email-response-preview" class="email-response-preview">
-                <div class="email-meta" id="response-meta"></div>
-                <div id="response-content"></div>
-                <div style="margin-top: 1rem;">
-                    <button class="btn btn-success" onclick="sendEmailResponse()">
-                        Send Response
-                    </button>
-                    <button class="btn btn-secondary" onclick="editResponse()" style="margin-left: 0.5rem;">
-                        Edit Response
-                    </button>
-                    <button class="btn btn-primary" onclick="analyzeEmailForMeeting()" style="margin-left: 0.5rem;">
-                        📅 Check for Meeting Needs
-                    </button>
-                    <button class="btn btn-secondary" onclick="cancelEmailResponse()" style="margin-left: 0.5rem;">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Calendar Analysis Section -->
-        <div class="card calendar-analysis-section">
-            <h2>📅 AI Calendar Analysis & Booking</h2>
-            <p style="margin-bottom: 1rem; color: #6c757d;">Get AI recommendations for scheduling and calendar optimization</p>
-            
-            <div class="calendar-input">
-                <input type="text" id="calendar-query" placeholder="e.g., 'Schedule a team meeting next week' or 'Analyze my schedule for conflicts'" />
-                <button class="btn btn-primary" onclick="analyzeCalendar()">Analyze</button>
-            </div>
-            
-            <div class="response-area" id="calendar-response"></div>
-            
-            <div id="meeting-form" class="hidden">
-                <h3 style="margin: 1rem 0;">Create Meeting Invite</h3>
-                <div class="form-group">
-                    <label for="meeting-title">Meeting Title:</label>
-                    <input type="text" id="meeting-title" placeholder="Meeting subject">
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="meeting-start">Start Time:</label>
-                        <input type="datetime-local" id="meeting-start">
-                    </div>
-                    <div class="form-group">
-                        <label for="meeting-end">End Time:</label>
-                        <input type="datetime-local" id="meeting-end">
+                    <div class="stat-trend">
+                        <span>📊</span>
+                        <span>3 upcoming</span>
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="meeting-attendees">Attendees (comma-separated emails):</label>
-                    <input type="text" id="meeting-attendees" placeholder="email1@company.com, email2@company.com">
-                </div>
-                
-                <div class="form-group">
-                    <label for="meeting-location">Location:</label>
-                    <input type="text" id="meeting-location" placeholder="Conference Room A, Teams Meeting, or Zoom Meeting">
-                </div>
-                
-                <div class="form-group">
-                    <label for="meeting-type-select">Meeting Type:</label>
-                    <select id="meeting-type-select" onchange="updateLocationForMeetingType()">
-                        <option value="in-person">In-Person Meeting</option>
-                        <option value="teams">Microsoft Teams Meeting</option>
-                        <option value="zoom">Zoom Meeting</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="meeting-agenda">Agenda:</label>
-                    <textarea id="meeting-agenda" placeholder="Meeting agenda and objectives..."></textarea>
-                </div>
-                
-                <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn btn-success" onclick="createMeetingInvite()">
-                        Create Meeting Invite
-                    </button>
-                    <button class="btn btn-secondary" onclick="hideMeetingForm()">
-                        Cancel
-                    </button>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">🎯</div>
+                    </div>
+                    <div class="stat-value">85%</div>
+                    <div class="stat-label">Productivity Score</div>
+                    <div class="stat-trend">
+                        <span>📈</span>
+                        <span>+8% this week</span>
+                    </div>
                 </div>
             </div>
-            
-            <div class="quick-actions">
-                <button class="quick-action" onclick="quickCalendarQuery('Analyze my schedule for conflicts this week')">
-                    🔍 Find Conflicts
+
+            <!-- Overview Section -->
+            <div id="overview-section" class="content-section active">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">
+                            <span>📊</span>
+                            Dashboard Overview
+                        </h2>
+                        <p class="section-subtitle">Your AI-powered email and calendar insights at a glance</p>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-action" onclick="quickQuery('Summarize my emails from today')">
+                        <span class="quick-action-icon">📊</span>
+                        Today's Email Summary
+                    </button>
+                    <button class="quick-action" onclick="loadTodaySchedule()">
+                        <span class="quick-action-icon">📅</span>
+                        Today's Schedule
+                    </button>
+                    <button class="quick-action" onclick="quickQuery('Show me my unread emails')">
+                        <span class="quick-action-icon">📬</span>
+                        Unread Messages
+                    </button>
+                    <button class="quick-action" onclick="quickQuery('Check my availability tomorrow')">
+                        <span class="quick-action-icon">🕒</span>
+                        Tomorrow's Availability
+                    </button>
+                </div>
+
+                <div class="response-area" id="overview-response">
+                    Welcome to your AI Email Agent dashboard! 🚀
+                    
+                    <br><br><strong>Quick Start Guide:</strong>
+                    <br>• Use the <strong>Email Analyzer</strong> to get intelligent insights about your messages
+                    <br>• Try the <strong>Email Responder</strong> to generate AI-powered replies
+                    <br>• Manage your schedule with the <strong>Calendar Manager</strong>
+                    <br>• Ask questions to your <strong>AI Assistant</strong> for personalized help
+                    
+                    <br><br><em>Click any quick action above to get started!</em>
+                </div>
+            </div>
+
+            <!-- Email Analyzer Section -->
+            <div id="email-analyzer-section" class="content-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">
+                            <span>🔍</span>
+                            Email Analyzer
+                        </h2>
+                        <p class="section-subtitle">Ask intelligent questions about your emails and get AI-powered insights</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ask about your emails:</label>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" class="form-input" id="analyzer-query" 
+                               placeholder="e.g., 'Show me emails about the project deadline'" 
+                               style="flex: 1;">
+                        <button class="btn btn-primary" onclick="analyzeEmails()">
+                            <span>🔍</span>
+                            Analyze
+                        </button>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-action" onclick="quickAnalyze('Summarize my emails from today')">
+                        <span class="quick-action-icon">📊</span>
+                        Daily Summary
+                    </button>
+                    <button class="quick-action" onclick="quickAnalyze('Find urgent emails')">
+                        <span class="quick-action-icon">🚨</span>
+                        Urgent Messages
+                    </button>
+                    <button class="quick-action" onclick="quickAnalyze('Show me emails with attachments')">
+                        <span class="quick-action-icon">📎</span>
+                        With Attachments
+                    </button>
+                    <button class="quick-action" onclick="quickAnalyze('Find meeting invitations')">
+                        <span class="quick-action-icon">📅</span>
+                        Meeting Invites
+                    </button>
+                </div>
+
+                <div class="response-area" id="analyzer-response">
+                    Enter a question about your emails above to get AI-powered insights and analysis.
+                </div>
+            </div>
+
+            <!-- Email Responder Section -->
+            <div id="email-responder-section" class="content-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">
+                            <span>✍️</span>
+                            Email Responder
+                        </h2>
+                        <p class="section-subtitle">Generate professional AI-powered email responses</p>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="loadEmailsForResponse()" style="margin-bottom: 2rem;">
+                    <span>📧</span>
+                    Load Recent Emails
                 </button>
-                <button class="quick-action" onclick="quickCalendarQuery('Best time for a 1-hour team meeting next week')">
-                    📅 Schedule Team Meeting
-                </button>
-                <button class="quick-action" onclick="quickCalendarQuery('Show me my availability for client calls')">
-                    📞 Client Call Availability
-                </button>
-                <button class="quick-action" onclick="showMeetingForm()">
-                    ➕ Create Meeting
-                </button>
+
+                <div id="email-list-container" style="display: none;">
+                    <h3 style="margin-bottom: 1rem;">Select an email to respond to:</h3>
+                    <div id="email-list" class="email-list"></div>
+                </div>
+
+                <div id="response-form" style="display: none;">
+                    <h3 style="margin-bottom: 1rem;">Generate Response</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Additional Context:</label>
+                        <textarea class="form-textarea" id="response-context" 
+                                  placeholder="Any additional context or specific points you want to address..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Response Tone:</label>
+                        <select class="form-select" id="response-tone">
+                            <option value="professional">Professional</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="formal">Formal</option>
+                            <option value="casual">Casual</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                        <button class="btn btn-primary" onclick="generateResponse()">
+                            <span>🤖</span>
+                            Generate Response
+                        </button>
+                        <button class="btn btn-outline" onclick="cancelResponse()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <div id="response-preview" style="display: none;">
+                    <h3 style="margin-bottom: 1rem;">Generated Response</h3>
+                    <div id="response-content" class="response-area"></div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-success" onclick="sendResponse()">
+                            <span>📤</span>
+                            Send Response
+                        </button>
+                        <button class="btn btn-outline" onclick="editResponse()">
+                            Edit
+                        </button>
+                        <button class="btn btn-secondary" onclick="cancelResponse()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Manager Section -->
+            <div id="calendar-manager-section" class="content-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">
+                            <span>📅</span>
+                            Calendar Manager
+                        </h2>
+                        <p class="section-subtitle">Intelligent calendar analysis and meeting scheduling</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Calendar Query:</label>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" class="form-input" id="calendar-query" 
+                               placeholder="e.g., 'Schedule a team meeting next week'" 
+                               style="flex: 1;">
+                        <button class="btn btn-primary" onclick="analyzeCalendar()">
+                            <span>📅</span>
+                            Analyze
+                        </button>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-action" onclick="quickCalendar('Analyze my schedule for conflicts this week')">
+                        <span class="quick-action-icon">🔍</span>
+                        Find Conflicts
+                    </button>
+                    <button class="quick-action" onclick="quickCalendar('Best time for a 1-hour team meeting next week')">
+                        <span class="quick-action-icon">👥</span>
+                        Schedule Meeting
+                    </button>
+                    <button class="quick-action" onclick="quickCalendar('Show me my availability for client calls')">
+                        <span class="quick-action-icon">📞</span>
+                        Client Availability
+                    </button>
+                    <button class="quick-action" onclick="showMeetingForm()">
+                        <span class="quick-action-icon">➕</span>
+                        Create Meeting
+                    </button>
+                </div>
+
+                <div class="response-area" id="calendar-response">
+                    Ask questions about your calendar or use the quick actions above to get started.
+                </div>
+
+                <div id="meeting-form" class="meeting-form">
+                    <h3 style="margin-bottom: 1.5rem;">Create Meeting Invite</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Meeting Title:</label>
+                        <input type="text" class="form-input" id="meeting-title" placeholder="Enter meeting subject">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Time:</label>
+                            <input type="datetime-local" class="form-input" id="meeting-start">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Time:</label>
+                            <input type="datetime-local" class="form-input" id="meeting-end">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Attendees (comma-separated emails):</label>
+                        <input type="text" class="form-input" id="meeting-attendees" 
+                               placeholder="email1@company.com, email2@company.com">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Meeting Type:</label>
+                            <select class="form-select" id="meeting-type">
+                                <option value="teams">Microsoft Teams</option>
+                                <option value="zoom">Zoom Meeting</option>
+                                <option value="in-person">In-Person</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Location:</label>
+                            <input type="text" class="form-input" id="meeting-location" 
+                                   placeholder="Conference Room or Meeting Link">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Agenda:</label>
+                        <textarea class="form-textarea" id="meeting-agenda" 
+                                  placeholder="Meeting agenda and objectives..."></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-success" onclick="createMeeting()">
+                            <span>📅</span>
+                            Create Meeting
+                        </button>
+                        <button class="btn btn-outline" onclick="hideMeetingForm()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Assistant Section -->
+            <div id="ai-assistant-section" class="content-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">
+                            <span>🤖</span>
+                            AI Assistant
+                        </h2>
+                        <p class="section-subtitle">Your personal AI assistant for email and calendar management</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ask your AI assistant:</label>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" class="form-input" id="ai-query" 
+                               placeholder="Ask anything about your emails, calendar, or productivity..." 
+                               style="flex: 1;">
+                        <button class="btn btn-primary" onclick="askAI()">
+                            <span>🤖</span>
+                            Ask AI
+                        </button>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-action" onclick="quickAI('What should I focus on today?')">
+                        <span class="quick-action-icon">🎯</span>
+                        Daily Focus
+                    </button>
+                    <button class="quick-action" onclick="quickAI('Help me prioritize my tasks')">
+                        <span class="quick-action-icon">📋</span>
+                        Prioritize Tasks
+                    </button>
+                    <button class="quick-action" onclick="quickAI('Suggest time blocks for deep work')">
+                        <span class="quick-action-icon">⏰</span>
+                        Time Blocking
+                    </button>
+                    <button class="quick-action" onclick="quickAI('How can I improve my email productivity?')">
+                        <span class="quick-action-icon">📈</span>
+                        Productivity Tips
+                    </button>
+                </div>
+
+                <div class="response-area" id="ai-response">
+                    Hi! I'm your AI assistant. Ask me anything about your emails, calendar, or how to improve your productivity. I can help you:
+                    
+                    <br><br>• Analyze your email patterns and suggest improvements
+                    <br>• Find optimal times for meetings and focused work
+                    <br>• Prioritize your tasks based on your schedule
+                    <br>• Generate professional email responses
+                    <br>• Detect meeting opportunities in your conversations
+                    
+                    <br><br>What would you like help with today?
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings-section" class="content-section">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">
+                            <span>⚙️</span>
+                            Settings
+                        </h2>
+                        <p class="section-subtitle">Customize your AI Email Agent experience</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; gap: 2rem;">
+                    <div>
+                        <h3 style="margin-bottom: 1rem; color: #667eea;">AI Response Preferences</h3>
+                        <div class="form-group">
+                            <label class="form-label">Default Response Tone:</label>
+                            <select class="form-select" id="default-tone">
+                                <option value="professional">Professional</option>
+                                <option value="friendly">Friendly</option>
+                                <option value="formal">Formal</option>
+                                <option value="casual">Casual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Summary Frequency:</label>
+                            <select class="form-select" id="summary-frequency">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="manual">Manual Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 style="margin-bottom: 1rem; color: #667eea;">Calendar Preferences</h3>
+                        <div class="form-group">
+                            <label class="form-label">Default Meeting Duration:</label>
+                            <select class="form-select" id="default-duration">
+                                <option value="30">30 minutes</option>
+                                <option value="60">1 hour</option>
+                                <option value="90">1.5 hours</option>
+                                <option value="120">2 hours</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Preferred Meeting Type:</label>
+                            <select class="form-select" id="preferred-meeting-type">
+                                <option value="teams">Microsoft Teams</option>
+                                <option value="zoom">Zoom</option>
+                                <option value="in-person">In-Person</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 style="margin-bottom: 1rem; color: #667eea;">Notification Settings</h3>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" checked> Email summary notifications
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" checked> Meeting conflict alerts
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox"> Weekly productivity reports
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="padding-top: 2rem; border-top: 2px solid #f0f0f0;">
+                        <button class="btn btn-primary" onclick="saveSettings()">
+                            <span>💾</span>
+                            Save Settings
+                        </button>
+                        <button class="btn btn-outline" onclick="resetSettings()" style="margin-left: 1rem;">
+                            Reset to Defaults
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
-            const date = new Date(dateString);
-            return {
-                date: date.toLocaleDateString('en-US', { 
-                    timeZone: timezone,
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                }),
-                time: date.toLocaleTimeString('en-US', {
-                    timeZone: timezone,
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                }),
-                full: date.toLocaleString('en-US', {
-                    timeZone: timezone,
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                })
-            };
-        }
-
+        // Global variables
         let currentUser = null;
         let selectedEmailId = null;
         let generatedResponse = null;
 
-        // Load user info and initial data
+        // Initialize dashboard
         window.onload = function() {
             loadUserInfo();
-            loadEmailStats();
-            loadCalendarStats();
+            loadStats();
+            showSection('overview');
         };
 
-        // Utility function to format markdown-style text into HTML
-        function formatMarkdownResponse(text) {
-            // First, clean up any JSON from the response
-            const cleanText = removeJsonFromResponse(text);
-            
-            let html = cleanText;
-            
-            // Convert headers
-            html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-            html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-            
-            // Convert bold text
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            
-            // Convert bullet points
-            html = html.replace(/^[-•] (.*$)/gm, '<li>$1</li>');
-            
-            // Wrap consecutive li elements in ul
-            html = html.replace(/(<li>.*<\/li>)/gs, function(match) {
-                return '<ul>' + match + '</ul>';
+        // Navigation functions
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
             });
             
-            // Convert line breaks to <br> but preserve structure
-            html = html.replace(/\n\n/g, '</p><p>');
-            html = '<p>' + html + '</p>';
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
             
-            // Clean up empty paragraphs and fix nested lists
-            html = html.replace(/<p><\/p>/g, '');
-            html = html.replace(/<p>(<h[1-3]>)/g, '$1');
-            html = html.replace(/(<\/h[1-3]>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<ul>)/g, '$1');
-            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+            // Show selected section
+            document.getElementById(sectionName + '-section').classList.add('active');
             
-            // Add special styling for certain sections
-            html = html.replace(/(<h2>Meeting Detection<\/h2>)/g, '<div class="highlight-box">$1');
-            html = html.replace(/(<h2>Specific Recommendations<\/h2>)/g, '</div><div class="info-box">$1');
-            html = html.replace(/(<h2>Action Items<\/h2>)/g, '</div><div class="warning-box">$1');
-            
-            // Close any open divs at the end
-            if (html.includes('highlight-box') || html.includes('info-box') || html.includes('warning-box')) {
-                html += '</div>';
-            }
-            
-            return html;
+            // Add active class to corresponding nav link
+            event.target.closest('.nav-link').classList.add('active');
         }
 
-        // Function to remove JSON from AI response - Enhanced version
-        function removeJsonFromResponse(text) {
-            // Remove JSON objects that start with { and contain "meetingDetected"
-            let cleanText = text.replace(/\{[\s\S]*?"meetingDetected"[\s\S]*?\}/g, '').trim();
-            
-            // Remove any remaining JSON code blocks (```json ... ```)
-            cleanText = cleanText.replace(/```json[\s\S]*?```/g, '').trim();
-            
-            // Remove any standalone JSON fragments that might remain
-            cleanText = cleanText.replace(/```[\s\S]*?```/g, '').trim();
-            
-            // Remove trailing commas and brackets that might be left over
-            cleanText = cleanText.replace(/[,\s]*\]\s*,\s*"priority":\s*"[^"]*"\s*\}\s*\}\s*$/g, '').trim();
-            
-            // Remove any remaining JSON-like fragments at the end
-            cleanText = cleanText.replace(/[,\s]*\{\s*"[^}]*\}\s*$/g, '').trim();
-            
-            return cleanText;
-        }
-
-        // Function to extract JSON from AI response
-        function extractJsonFromResponse(text) {
-            const jsonMatch = text.match(/\{[\s\S]*?"meetingDetected"[\s\S]*?\}/);
-            if (jsonMatch) {
-                try {
-                    return JSON.parse(jsonMatch[0]);
-                } catch (e) {
-                    console.log('Could not parse meeting JSON:', e);
-                    return null;
-                }
-            }
-            return null;
-        }
-
+        // Load user information
         async function loadUserInfo() {
             try {
                 const response = await fetch('/auth/user');
@@ -814,163 +1235,174 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
             }
         }
 
-        async function loadEmailStats() {
+        // Load dashboard statistics
+        async function loadStats() {
             try {
-                const response = await fetch('/api/emails?days=1');
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('total-emails').textContent = data.count;
+                // Load email stats
+                const emailResponse = await fetch('/api/emails?days=1');
+                if (emailResponse.ok) {
+                    const emailData = await emailResponse.json();
+                    document.getElementById('total-emails').textContent = emailData.count;
                     document.getElementById('unread-emails').textContent = 
-                        data.emails.filter(email => !email.isRead).length;
-                } else {
-                    throw new Error('Failed to fetch emails');
+                        emailData.emails.filter(email => !email.isRead).length;
+                }
+
+                // Load calendar stats
+                const calendarResponse = await fetch('/api/calendar/today');
+                if (calendarResponse.ok) {
+                    const calendarData = await calendarResponse.json();
+                    document.getElementById('today-meetings').textContent = calendarData.eventCount || 0;
                 }
             } catch (error) {
-                console.error('Error loading email stats:', error);
-                document.getElementById('total-emails').textContent = 'Error';
-                document.getElementById('unread-emails').textContent = 'Error';
+                console.error('Error loading stats:', error);
             }
         }
 
-        async function loadCalendarStats() {
-            try {
-                const response = await fetch('/api/calendar/events?days=1');
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('today-meetings').textContent = data.count;
-                } else {
-                    document.getElementById('today-meetings').textContent = '0';
-                }
-
-                const weekResponse = await fetch('/api/calendar/events?days=7');
-                if (weekResponse.ok) {
-                    const weekData = await weekResponse.json();
-                    document.getElementById('week-meetings').textContent = weekData.count;
-                } else {
-                    document.getElementById('week-meetings').textContent = '0';
-                }
-            } catch (error) {
-                console.error('Error loading calendar stats:', error);
-                document.getElementById('today-meetings').textContent = 'Error';
-                document.getElementById('week-meetings').textContent = 'Error';
-            }
+        // Utility functions for formatting responses
+        function formatResponse(text) {
+            let html = text;
+            
+            // Convert headers
+            html = html.replace(/^### (.*$)/gm, '<h3 style="color: #667eea; margin: 1rem 0 0.5rem 0;">$1</h3>');
+            html = html.replace(/^## (.*$)/gm, '<h2 style="color: #333; margin: 1.5rem 0 0.5rem 0;">$1</h2>');
+            html = html.replace(/^# (.*$)/gm, '<h1 style="color: #333; margin: 1.5rem 0 0.5rem 0;">$1</h1>');
+            
+            // Convert bold text
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #495057;">$1</strong>');
+            
+            // Convert bullet points
+            html = html.replace(/^[-•] (.*$)/gm, '<li style="margin: 0.25rem 0;">$1</li>');
+            html = html.replace(/(<li>.*<\/li>)/gs, '<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">$1</ul>');
+            
+            // Convert line breaks
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = '<p>' + html + '</p>';
+            html = html.replace(/<p><\/p>/g, '');
+            
+            return html;
         }
 
-        async function processQuery() {
-            const query = document.getElementById('query').value.trim();
-            if (!query) {
-                alert('Please enter a question');
-                return;
-            }
+        function showLoading(elementId) {
+            document.getElementById(elementId).innerHTML = 
+                '<div style="text-align: center; padding: 2rem;"><div class="loading-spinner"></div><p style="margin-top: 1rem; color: #666;">Processing your request...</p></div>';
+        }
 
-            const responseArea = document.getElementById('response');
-            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Processing your request...</div>';
+        function showError(elementId, message) {
+            document.getElementById(elementId).innerHTML = 
+                `<div class="status-message status-error"><span>❌</span> ${message}</div>`;
+        }
 
+        function showSuccess(elementId, message) {
+            document.getElementById(elementId).innerHTML = 
+                `<div class="status-message status-success"><span>✅</span> ${message}</div>`;
+        }
+
+        // Overview section functions
+        async function quickQuery(query) {
+            showLoading('overview-response');
+            
             try {
                 const response = await fetch('/api/emails/query', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        query: query,
-                        includeDays: 7 
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, includeDays: 7 })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    responseArea.innerHTML = formatMarkdownResponse(data.response);
+                    document.getElementById('overview-response').innerHTML = formatResponse(data.response);
                 } else {
                     const errorData = await response.json();
-                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to process query'}</div>`;
+                    showError('overview-response', errorData.message || 'Failed to process query');
                 }
             } catch (error) {
                 console.error('Error processing query:', error);
-                responseArea.innerHTML = '<div class="error">Error: Failed to connect to AI service</div>';
-            }
-        }
-
-        function quickQuery(query) {
-            document.getElementById('query').value = query;
-            processQuery();
-        }
-
-        async function loadEmailSummary() {
-            const responseArea = document.getElementById('response');
-            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Generating email summary...</div>';
-
-            try {
-                const response = await fetch('/api/emails/summary/daily?days=1');
-                if (response.ok) {
-                    const data = await response.json();
-                    responseArea.innerHTML = formatMarkdownResponse(`# Email Summary for Today\n\n${data.summary}`);
-                } else {
-                    const errorData = await response.json();
-                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to generate summary'}</div>`;
-                }
-            } catch (error) {
-                console.error('Error loading email summary:', error);
-                responseArea.innerHTML = '<div class="error">Error: Failed to generate email summary</div>';
+                showError('overview-response', 'Failed to connect to AI service');
             }
         }
 
         async function loadTodaySchedule() {
-            const responseArea = document.getElementById('response');
-            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Loading today\'s schedule...</div>';
-
+            showLoading('overview-response');
+            
             try {
                 const response = await fetch('/api/calendar/today');
                 if (response.ok) {
                     const data = await response.json();
                     
-                    let scheduleText = `# Today's Schedule (${data.date})\n\n`;
-                    scheduleText += `**${data.eventCount} meetings scheduled**\n\n`;
+                    let scheduleHtml = `<h3 style="color: #667eea;">📅 Today's Schedule (${data.date})</h3>`;
+                    scheduleHtml += `<p><strong>${data.eventCount} meetings scheduled</strong></p>`;
                     
                     if (data.events && data.events.length > 0) {
-                        scheduleText += `## Your Meetings:\n\n`;
+                        scheduleHtml += '<div style="margin-top: 1rem;">';
                         data.events.forEach((event, index) => {
-                            const timeInfo = formatDateWithTimezone(event.start.dateTime);
-                            scheduleText += `**${index + 1}. ${event.subject}**\n`;
-                            scheduleText += `📅 Time: ${event.displayTime || timeInfo.time}\n`;
-                            scheduleText += `📍 Location: ${event.location?.displayName || 'No location specified'}\n`;
-                            if (event.attendees && event.attendees.length > 0) {
-                                scheduleText += `👥 Attendees: ${event.attendees.length} people\n`;
-                            }
-                            scheduleText += `\n`;
+                            scheduleHtml += `
+                                <div style="background: #f8f9fa; padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border-left: 4px solid #667eea;">
+                                    <strong>${event.subject}</strong><br>
+                                    <span style="color: #666;">🕒 ${event.displayTime || 'Time not specified'}</span><br>
+                                    <span style="color: #666;">📍 ${event.location?.displayName || 'No location'}</span>
+                                </div>
+                            `;
                         });
+                        scheduleHtml += '</div>';
                     } else {
-                        scheduleText += `🎉 **No meetings scheduled today!** \n\nGreat day to focus on deep work.`;
+                        scheduleHtml += '<p style="color: #28a745; margin-top: 1rem;">🎉 No meetings today! Great day for focused work.</p>';
                     }
                     
-                    scheduleText += `\n\n*Times displayed in Eastern Time (${data.timezone || 'America/New_York'})*`;
-                    
-                    responseArea.innerHTML = formatMarkdownResponse(scheduleText);
+                    document.getElementById('overview-response').innerHTML = scheduleHtml;
                 } else {
-                    const errorData = await response.json();
-                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to load schedule'}</div>`;
+                    showError('overview-response', 'Failed to load schedule');
                 }
             } catch (error) {
-                console.error('Error loading today\'s schedule:', error);
-                responseArea.innerHTML = '<div class="error">Error: Failed to load today\'s schedule</div>';
+                console.error('Error loading schedule:', error);
+                showError('overview-response', 'Failed to load today\'s schedule');
             }
         }
 
-        // Email Response Functions
-        async function loadEmails() {
+        // Email Analyzer functions
+        async function analyzeEmails() {
+            const query = document.getElementById('analyzer-query').value.trim();
+            if (!query) {
+                alert('Please enter a question about your emails');
+                return;
+            }
+
+            showLoading('analyzer-response');
+            
+            try {
+                const response = await fetch('/api/emails/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, includeDays: 7 })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('analyzer-response').innerHTML = formatResponse(data.response);
+                } else {
+                    const errorData = await response.json();
+                    showError('analyzer-response', errorData.message || 'Failed to analyze emails');
+                }
+            } catch (error) {
+                console.error('Error analyzing emails:', error);
+                showError('analyzer-response', 'Failed to connect to AI service');
+            }
+        }
+
+        function quickAnalyze(query) {
+            document.getElementById('analyzer-query').value = query;
+            analyzeEmails();
+        }
+
+        // Email Responder functions
+        async function loadEmailsForResponse() {
             try {
                 const response = await fetch('/api/emails?days=3');
                 if (response.ok) {
                     const data = await response.json();
-                    // Filter out sent emails (emails where the user is the sender)
-                    const receivedEmails = data.emails.filter(email => {
-                        const userEmail = currentUser?.username;
-                        const fromEmail = email.from?.emailAddress?.address;
-                        return userEmail && fromEmail && fromEmail.toLowerCase() !== userEmail.toLowerCase();
-                    });
-                    displayEmailList(receivedEmails);
+                    displayEmailList(data.emails);
+                    document.getElementById('email-list-container').style.display = 'block';
                 } else {
-                    throw new Error('Failed to fetch emails');
+                    alert('Failed to load emails');
                 }
             } catch (error) {
                 console.error('Error loading emails:', error);
@@ -983,8 +1415,7 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
             emailList.innerHTML = '';
             
             if (emails.length === 0) {
-                emailList.innerHTML = '<div style="padding: 1rem; text-align: center; color: #6c757d;">No received emails found in the last 3 days</div>';
-                emailList.style.display = 'block';
+                emailList.innerHTML = '<div style="padding: 2rem; text-align: center; color: #666;">No recent emails found</div>';
                 return;
             }
             
@@ -993,22 +1424,24 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
                 emailItem.className = 'email-item';
                 emailItem.onclick = () => selectEmail(email.id, emailItem, email);
                 
-                const isUnread = !email.isRead ? '🔵 ' : '';
-                const hasAttachments = email.hasAttachments ? '📎 ' : '';
+                const unreadBadge = !email.isRead ? '🔵 ' : '';
+                const attachmentBadge = email.hasAttachments ? '📎 ' : '';
                 
                 emailItem.innerHTML = `
-                    <div class="email-subject">${isUnread}${hasAttachments}${email.subject || 'No Subject'}</div>
+                    <div class="email-subject">${unreadBadge}${attachmentBadge}${email.subject || 'No Subject'}</div>
                     <div class="email-from">From: ${email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown'}</div>
                     <div class="email-preview">${email.bodyPreview || 'No preview available'}</div>
+                    <div class="email-meta">
+                        <span>${new Date(email.receivedDateTime).toLocaleDateString()}</span>
+                        <span>${email.isRead ? 'Read' : 'Unread'}</span>
+                    </div>
                 `;
                 
                 emailList.appendChild(emailItem);
             });
-            
-            emailList.style.display = 'block';
         }
 
-        async function selectEmail(emailId, element, emailData) {
+        function selectEmail(emailId, element, emailData) {
             // Remove previous selection
             document.querySelectorAll('.email-item').forEach(item => {
                 item.classList.remove('selected');
@@ -1018,132 +1451,11 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
             element.classList.add('selected');
             selectedEmailId = emailId;
             
-            // Show email preview in the form section
-            await showEmailPreview(emailData);
-            
             // Show response form
-            document.getElementById('email-response-form').classList.remove('hidden');
+            document.getElementById('response-form').style.display = 'block';
         }
 
-        async function showEmailPreview(emailData) {
-            try {
-                // Get full email content for preview
-                const response = await fetch(`/api/emails/${emailData.id}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    const fullEmail = data.email;
-                    
-                    // Update the form with email preview
-                    const formElement = document.getElementById('email-response-form');
-                    
-                    // Add email preview section if it doesn't exist
-                    let previewSection = document.getElementById('email-preview-section');
-                    if (!previewSection) {
-                        previewSection = document.createElement('div');
-                        previewSection.id = 'email-preview-section';
-                        previewSection.style.cssText = 'background: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;';
-                        formElement.insertBefore(previewSection, formElement.firstChild);
-                    }
-                    
-                    // Extract and clean email body for full display
-                    let emailBody = fullEmail.body?.content || fullEmail.bodyPreview || 'No content available';
-                    let displayBody = emailBody;
-                    
-                    // Enhanced HTML cleaning for better readability
-                    if (emailBody.includes('<html') || emailBody.includes('<body')) {
-                        displayBody = emailBody
-                            .replace(/<script[^>]*>.*?<\/script>/gi, '')
-                            .replace(/<style[^>]*>.*?<\/style>/gi, '')
-                            .replace(/<head[^>]*>.*?<\/head>/gi, '')
-                            .replace(/<meta[^>]*>/gi, '')
-                            .replace(/<link[^>]*>/gi, '')
-                            .replace(/<img[^>]*>/gi, '[Image]')
-                            .replace(/<br\s*\/?>/gi, '\n')
-                            .replace(/<\/p>/gi, '\n\n')
-                            .replace(/<\/div>/gi, '\n')
-                            .replace(/<\/li>/gi, '\n')
-                            .replace(/<[^>]*>/g, '')
-                            .replace(/&nbsp;/g, ' ')
-                            .replace(/&lt;/g, '<')
-                            .replace(/&gt;/g, '>')
-                            .replace(/&amp;/g, '&')
-                            .replace(/&quot;/g, '"')
-                            .replace(/\n{3,}/g, '\n\n')
-                            .trim();
-                    }
-                    
-                    // Truncate if extremely long (over 2000 characters) but show much more than before
-                    const isLongEmail = displayBody.length > 2000;
-                    const truncatedBody = isLongEmail ? displayBody.substring(0, 2000) + '\n\n[Email truncated - full content available for AI processing]' : displayBody;
-                    
-                    previewSection.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <h4 style="margin: 0; color: #333;">📧 Email Preview</h4>
-                            ${isLongEmail ? `<button onclick="toggleEmailExpansion()" id="expand-btn" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Show Full Email</button>` : ''}
-                        </div>
-                        <div style="margin-bottom: 0.5rem;"><strong>From:</strong> ${fullEmail.from?.emailAddress?.name || 'Unknown'} &lt;${fullEmail.from?.emailAddress?.address || 'unknown@email.com'}&gt;</div>
-                        <div style="margin-bottom: 0.5rem;"><strong>Subject:</strong> ${fullEmail.subject || 'No Subject'}</div>
-                        <div style="margin-bottom: 0.5rem;"><strong>Received:</strong> ${new Date(fullEmail.receivedDateTime).toLocaleString()}</div>
-                        ${fullEmail.hasAttachments ? '<div style="margin-bottom: 0.5rem;"><strong>📎 Has Attachments:</strong> Yes</div>' : ''}
-                        <div style="background: white; padding: 0.75rem; border-radius: 4px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4;" id="email-body-content">
-                            <strong>Content:</strong><br><br>
-                            ${truncatedBody}
-                        </div>
-                    `;
-                    
-                    // Store full content for expansion feature
-                    window.fullEmailContent = displayBody;
-                    window.truncatedEmailContent = truncatedBody;
-                }
-            } catch (error) {
-                console.error('Error loading email preview:', error);
-            }
-        }
-
-        function toggleEmailExpansion() {
-            const bodyContent = document.getElementById('email-body-content');
-            const expandBtn = document.getElementById('expand-btn');
-            const currentContent = bodyContent.innerHTML;
-            
-            if (currentContent.includes('[Email truncated')) {
-                // Show full content
-                bodyContent.innerHTML = `<strong>Content:</strong><br><br>${window.fullEmailContent}`;
-                expandBtn.textContent = 'Show Less';
-                bodyContent.style.maxHeight = '600px';
-            } else {
-                // Show truncated content
-                bodyContent.innerHTML = `<strong>Content:</strong><br><br>${window.truncatedEmailContent}`;
-                expandBtn.textContent = 'Show Full Email';
-                bodyContent.style.maxHeight = '400px';
-            }
-        }
-
-        function cancelEmailResponse() {
-            // Hide all response-related elements
-            document.getElementById('email-response-form').classList.add('hidden');
-            document.getElementById('email-response-preview').classList.remove('active');
-            
-            // Clear selections
-            document.querySelectorAll('.email-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            
-            // Reset variables
-            selectedEmailId = null;
-            generatedResponse = null;
-            
-            // Clear form fields
-            document.getElementById('response-context').value = '';
-            document.getElementById('response-tone').value = 'professional';
-            
-            // Remove email preview section if it exists
-            const previewSection = document.getElementById('email-preview-section');
-            if (previewSection) {
-                previewSection.remove();
-            }
-        }
-
-        async function generateEmailResponse() {
+        async function generateResponse() {
             if (!selectedEmailId) {
                 alert('Please select an email first');
                 return;
@@ -1152,45 +1464,41 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
             const context = document.getElementById('response-context').value;
             const tone = document.getElementById('response-tone').value;
             
+            showLoading('response-content');
+            document.getElementById('response-preview').style.display = 'block';
+            
             try {
                 const response = await fetch(`/api/emails/${selectedEmailId}/respond`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ context, tone })
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    showEmailResponsePreview(data);
+                    generatedResponse = data;
+                    
+                    document.getElementById('response-content').innerHTML = `
+                        <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <strong>To:</strong> ${data.originalFrom}<br>
+                            <strong>Subject:</strong> ${data.suggestedSubject}
+                        </div>
+                        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 2px solid #e1e5e9;">
+                            <h4 style="margin-bottom: 1rem; color: #333;">Generated Response:</h4>
+                            <div style="white-space: pre-wrap; line-height: 1.6;">${data.generatedResponse}</div>
+                        </div>
+                    `;
                 } else {
                     const errorData = await response.json();
-                    alert(`Error: ${errorData.message || 'Failed to generate response'}`);
+                    showError('response-content', errorData.message || 'Failed to generate response');
                 }
             } catch (error) {
                 console.error('Error generating response:', error);
-                alert('Failed to generate email response');
+                showError('response-content', 'Failed to generate email response');
             }
         }
 
-        function showEmailResponsePreview(data) {
-            generatedResponse = data;
-            
-            document.getElementById('response-meta').innerHTML = `
-                <strong>To:</strong> ${data.originalFrom}<br>
-                <strong>Subject:</strong> ${data.suggestedSubject}
-            `;
-            
-            document.getElementById('response-content').innerHTML = `
-                <h4>Generated Response:</h4>
-                <div style="white-space: pre-wrap; background: white; padding: 1rem; border-radius: 4px; margin-top: 0.5rem;">${data.generatedResponse}</div>
-            `;
-            
-            document.getElementById('email-response-preview').classList.add('active');
-        }
-
-        async function sendEmailResponse() {
+        async function sendResponse() {
             if (!generatedResponse) {
                 alert('No response to send');
                 return;
@@ -1199,9 +1507,7 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
             try {
                 const response = await fetch(`/api/emails/${selectedEmailId}/send`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         responseContent: generatedResponse.generatedResponse,
                         subject: generatedResponse.suggestedSubject
@@ -1209,71 +1515,72 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
                 });
                 
                 if (response.ok) {
-                    alert('Email sent successfully!');
-                    document.getElementById('email-response-preview').classList.remove('active');
-                    document.getElementById('email-response-form').classList.add('hidden');
-                    selectedEmailId = null;
-                    generatedResponse = null;
+                    showSuccess('response-content', 'Email sent successfully!');
+                    setTimeout(() => {
+                        cancelResponse();
+                    }, 2000);
                 } else {
                     const errorData = await response.json();
-                    alert(`Error: ${errorData.message || 'Failed to send email'}`);
+                    showError('response-content', errorData.message || 'Failed to send email');
                 }
             } catch (error) {
                 console.error('Error sending email:', error);
-                alert('Failed to send email');
+                showError('response-content', 'Failed to send email');
             }
         }
 
         function editResponse() {
-            const content = document.getElementById('response-content');
-            const responseText = generatedResponse.generatedResponse;
+            if (!generatedResponse) return;
             
-            content.innerHTML = `
-                <h4>Edit Response:</h4>
-                <textarea id="edit-response-text" style="width: 100%; min-height: 200px; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid #e1e5e9; border-radius: 4px;">${responseText}</textarea>
-                <button class="btn btn-primary" onclick="updateResponse()" style="margin-top: 0.5rem;">Update Response</button>
+            const responseText = generatedResponse.generatedResponse;
+            document.getElementById('response-content').innerHTML = `
+                <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <strong>To:</strong> ${generatedResponse.originalFrom}<br>
+                    <strong>Subject:</strong> ${generatedResponse.suggestedSubject}
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label">Edit Response:</label>
+                    <textarea id="edit-response-text" class="form-textarea" style="min-height: 200px;">${responseText}</textarea>
+                </div>
+                <button class="btn btn-primary" onclick="updateResponse()">Update Response</button>
             `;
         }
 
         function updateResponse() {
             const newText = document.getElementById('edit-response-text').value;
             generatedResponse.generatedResponse = newText;
-            showEmailResponsePreview(generatedResponse);
-        }
-
-        async function analyzeEmailForMeeting() {
-            if (!selectedEmailId) {
-                alert('Please select an email first');
-                return;
-            }
             
-            try {
-                const emailResponse = await fetch(`/api/emails/${selectedEmailId}`);
-                if (!emailResponse.ok) {
-                    throw new Error('Failed to fetch email content');
-                }
-                
-                const emailData = await emailResponse.json();
-                const email = emailData.email;
-                
-                const emailSubject = email.subject || 'No Subject';
-                const fromName = email.from?.emailAddress?.name || 'Unknown';
-                
-                document.getElementById('calendar-query').value = `Analyze this email for meeting opportunities: "${emailSubject}" from ${fromName}`;
-                
-                document.querySelector('.calendar-analysis-section').scrollIntoView({ behavior: 'smooth' });
-                
-                setTimeout(() => {
-                    analyzeCalendar();
-                }, 500);
-                
-            } catch (error) {
-                console.error('Error analyzing email for meeting:', error);
-                alert('Failed to analyze email for meeting opportunities');
-            }
+            document.getElementById('response-content').innerHTML = `
+                <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <strong>To:</strong> ${generatedResponse.originalFrom}<br>
+                    <strong>Subject:</strong> ${generatedResponse.suggestedSubject}
+                </div>
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 2px solid #e1e5e9;">
+                    <h4 style="margin-bottom: 1rem; color: #333;">Updated Response:</h4>
+                    <div style="white-space: pre-wrap; line-height: 1.6;">${newText}</div>
+                </div>
+            `;
         }
 
-        // Calendar Analysis Functions
+        function cancelResponse() {
+            document.getElementById('response-form').style.display = 'none';
+            document.getElementById('response-preview').style.display = 'none';
+            document.getElementById('email-list-container').style.display = 'none';
+            
+            // Clear selections and reset
+            document.querySelectorAll('.email-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            selectedEmailId = null;
+            generatedResponse = null;
+            
+            // Clear form fields
+            document.getElementById('response-context').value = '';
+            document.getElementById('response-tone').value = 'professional';
+        }
+
+        // Calendar Manager functions
         async function analyzeCalendar() {
             const query = document.getElementById('calendar-query').value.trim();
             if (!query) {
@@ -1281,291 +1588,105 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
                 return;
             }
 
-            const responseArea = document.getElementById('calendar-response');
-            responseArea.innerHTML = '<div style="text-align: center; color: #6c757d; font-style: italic;">Analyzing your calendar and detecting meeting opportunities...</div>';
-
+            showLoading('calendar-response');
+            
             try {
-                let emailContext = null;
-                if (selectedEmailId) {
-                    const emailResponse = await fetch(`/api/emails/${selectedEmailId}`);
-                    if (emailResponse.ok) {
-                        const emailData = await emailResponse.json();
-                        const email = emailData.email;
-                        emailContext = {
-                            from: email.from?.emailAddress?.address,
-                            subject: email.subject,
-                            content: email.body?.content || email.bodyPreview
-                        };
-                    }
-                }
-
                 const response = await fetch('/api/calendar/analyze', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        query,
-                        emailContext 
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
+                    document.getElementById('calendar-response').innerHTML = formatResponse(data.analysis);
                     
-                    const meetingData = extractJsonFromResponse(data.analysis);
-                    const cleanedAnalysis = removeJsonFromResponse(data.analysis);
-                    
-                    responseArea.innerHTML = formatMarkdownResponse(cleanedAnalysis);
-                    
-                    const finalMeetingData = meetingData || data.meetingData;
-                    if (finalMeetingData && finalMeetingData.meetingDetected) {
-                        showMeetingSuggestion(finalMeetingData.meetingDetails || finalMeetingData);
+                    // Check for meeting suggestions
+                    if (data.meetingData && data.meetingData.meetingDetected) {
+                        showMeetingSuggestion(data.meetingData.meetingDetails);
                     }
                 } else {
                     const errorData = await response.json();
-                    responseArea.innerHTML = `<div class="error">Error: ${errorData.message || 'Failed to analyze calendar'}</div>`;
+                    showError('calendar-response', errorData.message || 'Failed to analyze calendar');
                 }
             } catch (error) {
                 console.error('Error analyzing calendar:', error);
-                responseArea.innerHTML = '<div class="error">Error: Failed to analyze calendar</div>';
+                showError('calendar-response', 'Failed to analyze calendar');
             }
         }
 
-        function showMeetingSuggestion(meetingDetails) {
-            const suggestionDiv = document.createElement('div');
-            suggestionDiv.id = 'meeting-suggestion';
-            suggestionDiv.style.cssText = `
-                background: #e8f5e8; 
-                border: 2px solid #4caf50; 
-                border-radius: 8px; 
-                padding: 1rem; 
-                margin-top: 1rem;
-            `;
-            
-            // Format suggested times with proper timezone display
-            const timeOptions = meetingDetails.suggestedTimes ? meetingDetails.suggestedTimes.map((time, index) => {
-                const dateTime = new Date(`${time.date}T${time.time}`);
-                const estTime = formatDateWithTimezone(dateTime.toISOString());
-                return `<option value="${time.date}T${time.time}">${time.label} (${estTime.full})</option>`;
-            }).join('') : '<option value="">No suggested times available</option>';
-            
-            suggestionDiv.innerHTML = `
-                <h4 style="color: #2e7d32; margin: 0 0 1rem 0;">🤖 AI Meeting Suggestion Detected!</h4>
-                <div style="background: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                    <p><strong>Meeting:</strong> ${meetingDetails.title}</p>
-                    <p><strong>Duration:</strong> ${meetingDetails.duration} minutes</p>
-                    <p><strong>Attendees:</strong> ${meetingDetails.attendees ? meetingDetails.attendees.join(', ') : 'No attendees specified'}</p>
-                    <p><strong>Type:</strong> ${meetingDetails.meetingType}</p>
-                    <p><strong>Priority:</strong> ${meetingDetails.priority}</p>
-                    <p><strong>Description:</strong> ${meetingDetails.description}</p>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                    <div>
-                        <label><strong>Suggested Time (EST):</strong></label>
-                        <select id="suggested-time" style="width: 100%; padding: 0.5rem;">
-                            ${timeOptions}
-                            <option value="custom">Custom Time...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label><strong>Meeting Type:</strong></label>
-                        <select id="suggested-meeting-type" style="width: 100%; padding: 0.5rem;">
-                            <option value="teams" ${meetingDetails.meetingType === 'teams' ? 'selected' : ''}>Teams Meeting</option>
-                            <option value="zoom" ${meetingDetails.meetingType === 'zoom' ? 'selected' : ''}>Zoom Meeting</option>
-                            <option value="in-person" ${meetingDetails.meetingType === 'in-person' ? 'selected' : ''}>In-Person</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div id="custom-time-section" style="display: none; margin-bottom: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div>
-                            <label>Custom Start Time (EST):</label>
-                            <input type="datetime-local" id="custom-start-time" style="width: 100%; padding: 0.5rem;">
-                        </div>
-                        <div>
-                            <label>Custom End Time (EST):</label>
-                            <input type="datetime-local" id="custom-end-time" style="width: 100%; padding: 0.5rem;">
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                    <button onclick="createSuggestedMeeting()" class="btn btn-success">
-                        📅 Create Meeting Invite
-                    </button>
-                    <button onclick="customizeMeeting()" class="btn btn-primary">
-                        ✏️ Customize Details
-                    </button>
-                    <button onclick="dismissSuggestion()" class="btn btn-secondary">
-                        ❌ Cancel Request
-                    </button>
-                </div>
-            `;
-            
-            document.getElementById('calendar-response').appendChild(suggestionDiv);
-            
-            // Update the event listener to handle timezone conversion
-            document.getElementById('suggested-time').addEventListener('change', function() {
-                const customSection = document.getElementById('custom-time-section');
-                if (this.value === 'custom') {
-                    customSection.style.display = 'block';
-                    // Set default times in user's local timezone
-                    const now = new Date();
-                    const oneHour = new Date(now.getTime() + 60 * 60 * 1000);
-                    document.getElementById('custom-start-time').value = now.toISOString().slice(0, 16);
-                    document.getElementById('custom-end-time').value = oneHour.toISOString().slice(0, 16);
-                } else {
-                    customSection.style.display = 'none';
-                }
-            });
-            
-            window.suggestedMeetingDetails = meetingDetails;
-        }
-
-        async function createSuggestedMeeting() {
-            const meetingDetails = window.suggestedMeetingDetails;
-            if (!meetingDetails) return;
-            
-            const selectedTime = document.getElementById('suggested-time').value;
-            const meetingType = document.getElementById('suggested-meeting-type').value;
-            
-            let startTime, endTime;
-            
-            if (selectedTime === 'custom') {
-                startTime = document.getElementById('custom-start-time').value;
-                endTime = document.getElementById('custom-end-time').value;
-                
-                if (!startTime || !endTime) {
-                    alert('Please set custom start and end times');
-                    return;
-                }
-            } else {
-                startTime = selectedTime;
-                const startDate = new Date(selectedTime);
-                const endDate = new Date(startDate.getTime() + meetingDetails.duration * 60 * 1000);
-                endTime = endDate.toISOString().slice(0, 16);
-            }
-            
-            try {
-                const response = await fetch('/api/calendar/create-invite', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        title: meetingDetails.title,
-                        startTime: new Date(startTime).toISOString(),
-                        endTime: new Date(endTime).toISOString(),
-                        attendees: meetingDetails.attendees,
-                        agenda: meetingDetails.description,
-                        meetingType: meetingType,
-                        location: meetingType === 'in-person' ? 'Office' : undefined
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('🎉 Meeting invite created successfully!');
-                    dismissSuggestion();
-                    loadCalendarStats();
-                } else {
-                    const errorData = await response.json();
-                    alert(`Error: ${errorData.message || 'Failed to create meeting'}`);
-                }
-            } catch (error) {
-                console.error('Error creating meeting:', error);
-                alert('Failed to create meeting invite');
-            }
-        }
-
-        function customizeMeeting() {
-            const meetingDetails = window.suggestedMeetingDetails;
-            if (!meetingDetails) return;
-            
-            document.getElementById('meeting-title').value = meetingDetails.title;
-            document.getElementById('meeting-attendees').value = meetingDetails.attendees ? meetingDetails.attendees.join(', ') : '';
-            document.getElementById('meeting-agenda').value = meetingDetails.description;
-            
-            if (meetingDetails.suggestedTimes && meetingDetails.suggestedTimes.length > 0) {
-                const firstSuggestion = meetingDetails.suggestedTimes[0];
-                const startDateTime = `${firstSuggestion.date}T${firstSuggestion.time}`;
-                const endDateTime = new Date(new Date(startDateTime).getTime() + meetingDetails.duration * 60 * 1000);
-                
-                document.getElementById('meeting-start').value = startDateTime;
-                document.getElementById('meeting-end').value = endDateTime.toISOString().slice(0, 16);
-            }
-            
-            document.getElementById('meeting-form').classList.remove('hidden');
-            dismissSuggestion();
-            document.getElementById('meeting-form').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function dismissSuggestion() {
-            const suggestion = document.getElementById('meeting-suggestion');
-            if (suggestion) {
-                suggestion.remove();
-            }
-            window.suggestedMeetingDetails = null;
-        }
-
-        function quickCalendarQuery(query) {
+        function quickCalendar(query) {
             document.getElementById('calendar-query').value = query;
             analyzeCalendar();
         }
 
-        function updateLocationForMeetingType() {
-            const meetingType = document.getElementById('meeting-type-select').value;
-            const locationField = document.getElementById('meeting-location');
+        function showMeetingSuggestion(meetingDetails) {
+            const suggestionHtml = `
+                <div style="background: #e8f5e8; border: 2px solid #4caf50; border-radius: 12px; padding: 1.5rem; margin-top: 1rem;">
+                    <h4 style="color: #2e7d32; margin: 0 0 1rem 0;">🤖 AI Meeting Suggestion Detected!</h4>
+                    <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p><strong>Meeting:</strong> ${meetingDetails.title}</p>
+                        <p><strong>Duration:</strong> ${meetingDetails.duration} minutes</p>
+                        <p><strong>Attendees:</strong> ${meetingDetails.attendees ? meetingDetails.attendees.join(', ') : 'None specified'}</p>
+                        <p><strong>Type:</strong> ${meetingDetails.meetingType}</p>
+                        <p><strong>Description:</strong> ${meetingDetails.description}</p>
+                    </div>
+                    <button class="btn btn-success" onclick="applyMeetingSuggestion()">📅 Apply Suggestion</button>
+                    <button class="btn btn-outline" onclick="dismissSuggestion()" style="margin-left: 0.5rem;">❌ Dismiss</button>
+                </div>
+            `;
             
-            switch(meetingType) {
-                case 'teams':
-                    locationField.value = 'Microsoft Teams Meeting';
-                    locationField.placeholder = 'Teams meeting link will be auto-generated';
-                    break;
-                case 'zoom':
-                    locationField.value = 'Zoom Meeting';
-                    locationField.placeholder = 'Add Zoom link manually after creation';
-                    break;
-                case 'in-person':
-                    locationField.value = '';
-                    locationField.placeholder = 'Conference Room A, Office Building, etc.';
-                    break;
-            }
+            document.getElementById('calendar-response').innerHTML += suggestionHtml;
+            window.currentMeetingSuggestion = meetingDetails;
+        }
+
+        function applyMeetingSuggestion() {
+            if (!window.currentMeetingSuggestion) return;
+            
+            const details = window.currentMeetingSuggestion;
+            document.getElementById('meeting-title').value = details.title;
+            document.getElementById('meeting-attendees').value = details.attendees ? details.attendees.join(', ') : '';
+            document.getElementById('meeting-agenda').value = details.description;
+            
+            showMeetingForm();
+        }
+
+        function dismissSuggestion() {
+            window.currentMeetingSuggestion = null;
+            // Remove suggestion from DOM
+            const suggestions = document.querySelectorAll('[style*="background: #e8f5e8"]');
+            suggestions.forEach(s => s.remove());
         }
 
         function showMeetingForm() {
-            document.getElementById('meeting-form').classList.remove('hidden');
+            document.getElementById('meeting-form').classList.add('active');
             
+            // Set default times
             const now = new Date();
-            const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+            const oneHour = new Date(now.getTime() + 60 * 60 * 1000);
             
             document.getElementById('meeting-start').value = now.toISOString().slice(0, 16);
-            document.getElementById('meeting-end').value = oneHourLater.toISOString().slice(0, 16);
-            
-            document.getElementById('meeting-type-select').value = 'teams';
-            updateLocationForMeetingType();
+            document.getElementById('meeting-end').value = oneHour.toISOString().slice(0, 16);
         }
 
         function hideMeetingForm() {
-            document.getElementById('meeting-form').classList.add('hidden');
+            document.getElementById('meeting-form').classList.remove('active');
             
-            // Clear form fields
+            // Clear form
             document.getElementById('meeting-title').value = '';
             document.getElementById('meeting-attendees').value = '';
             document.getElementById('meeting-location').value = '';
             document.getElementById('meeting-agenda').value = '';
-            document.getElementById('meeting-type-select').value = 'in-person';
         }
 
-        async function createMeetingInvite() {
+        async function createMeeting() {
             const title = document.getElementById('meeting-title').value.trim();
             const startTime = document.getElementById('meeting-start').value;
             const endTime = document.getElementById('meeting-end').value;
             const attendeesStr = document.getElementById('meeting-attendees').value.trim();
             const location = document.getElementById('meeting-location').value.trim();
             const agenda = document.getElementById('meeting-agenda').value.trim();
+            const meetingType = document.getElementById('meeting-type').value;
             
             if (!title || !startTime || !endTime) {
                 alert('Please fill in the required fields (title, start time, end time)');
@@ -1573,63 +1694,127 @@ function formatDateWithTimezone(dateString, timezone = 'America/New_York') {
             }
             
             const attendees = attendeesStr ? attendeesStr.split(',').map(email => email.trim()).filter(email => email) : [];
-            const selectedMeetingType = document.getElementById('meeting-type-select').value;
             
             try {
                 const response = await fetch('/api/calendar/create-invite', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        title,
-                        startTime: new Date(startTime).toISOString(),
+                        title, startTime: new Date(startTime).toISOString(),
                         endTime: new Date(endTime).toISOString(),
-                        attendees,
-                        location,
-                        agenda,
-                        meetingType: selectedMeetingType
+                        attendees, location, agenda, meetingType
                     })
                 });
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    let successMessage = 'Meeting invite created successfully!';
-                    
-                    if (data.meetingType === 'teams') {
-                        successMessage += '\n\nTeams meeting link will be automatically generated.';
-                    } else if (data.meetingType === 'zoom') {
-                        successMessage += '\n\nNote: Please add the Zoom meeting link manually to the meeting.';
-                    }
-                    
-                    alert(successMessage);
-                    
-                    // Clear and hide form
+                    showSuccess('calendar-response', 'Meeting invite created successfully! 🎉');
                     hideMeetingForm();
-                    
-                    loadCalendarStats();
+                    loadStats();
                 } else {
                     const errorData = await response.json();
-                    alert(`Error: ${errorData.message || 'Failed to create meeting invite'}`);
+                    showError('calendar-response', errorData.message || 'Failed to create meeting');
                 }
             } catch (error) {
-                console.error('Error creating meeting invite:', error);
-                alert('Failed to create meeting invite');
+                console.error('Error creating meeting:', error);
+                showError('calendar-response', 'Failed to create meeting invite');
             }
         }
 
-        // Handle Enter key in query inputs
-        document.getElementById('query').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                processQuery();
+        // AI Assistant functions
+        async function askAI() {
+            const query = document.getElementById('ai-query').value.trim();
+            if (!query) {
+                alert('Please enter a question for your AI assistant');
+                return;
+            }
+
+            showLoading('ai-response');
+            
+            try {
+                const response = await fetch('/api/emails/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, includeDays: 7 })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('ai-response').innerHTML = formatResponse(data.response);
+                } else {
+                    const errorData = await response.json();
+                    showError('ai-response', errorData.message || 'Failed to process request');
+                }
+            } catch (error) {
+                console.error('Error asking AI:', error);
+                showError('ai-response', 'Failed to connect to AI assistant');
+            }
+        }
+
+        function quickAI(query) {
+            document.getElementById('ai-query').value = query;
+            askAI();
+        }
+
+        // Settings functions
+        function saveSettings() {
+            // In a real app, this would save to a backend
+            showSuccess('settings-section', 'Settings saved successfully!');
+            
+            // Store settings in localStorage for demo
+            const settings = {
+                defaultTone: document.getElementById('default-tone').value,
+                summaryFrequency: document.getElementById('summary-frequency').value,
+                defaultDuration: document.getElementById('default-duration').value,
+                preferredMeetingType: document.getElementById('preferred-meeting-type').value
+            };
+            
+            localStorage.setItem('ai-email-agent-settings', JSON.stringify(settings));
+        }
+
+        function resetSettings() {
+            document.getElementById('default-tone').value = 'professional';
+            document.getElementById('summary-frequency').value = 'daily';
+            document.getElementById('default-duration').value = '60';
+            document.getElementById('preferred-meeting-type').value = 'teams';
+            
+            localStorage.removeItem('ai-email-agent-settings');
+            showSuccess('settings-section', 'Settings reset to defaults');
+        }
+
+        // Load saved settings on page load
+        function loadSettings() {
+            const saved = localStorage.getItem('ai-email-agent-settings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                document.getElementById('default-tone').value = settings.defaultTone || 'professional';
+                document.getElementById('summary-frequency').value = settings.summaryFrequency || 'daily';
+                document.getElementById('default-duration').value = settings.defaultDuration || '60';
+                document.getElementById('preferred-meeting-type').value = settings.preferredMeetingType || 'teams';
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + Enter to submit forms
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                const activeSection = document.querySelector('.content-section.active');
+                const activeInput = document.activeElement;
+                
+                if (activeInput.id === 'analyzer-query') {
+                    analyzeEmails();
+                } else if (activeInput.id === 'calendar-query') {
+                    analyzeCalendar();
+                } else if (activeInput.id === 'ai-query') {
+                    askAI();
+                }
             }
         });
-        
-        document.getElementById('calendar-query').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                analyzeCalendar();
-            }
-        });
+
+        // Auto-refresh stats every 5 minutes
+        setInterval(loadStats, 5 * 60 * 1000);
+
+        // Load settings when page loads
+        setTimeout(loadSettings, 100);
     </script>
 </body>
 </html>
