@@ -254,6 +254,8 @@ app.get('/auth/debug', (req, res) => {
     });
 });
 
+app.use(express.urlencoded({ extended: true }));
+
 const adminRoutes = require('./src/routes/admin');
 app.use('/admin', adminRoutes);
 
