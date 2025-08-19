@@ -1,17 +1,113 @@
 const express = require('express');
-const ClientOrganization = require('../models/ClientOrganization');
 const { requireAdminAuth, logoutAdmin, getActiveSessionsCount } = require('../middleware/adminAuth');
 const router = express.Router();
 
 // Middleware to parse form data
 router.use(express.urlencoded({ extended: true }));
 
+// Function to get working ClientOrganization model
+async function getClientOrganizationModel() {
+    try {
+        // First try to get the model
+        const ClientOrganization = require('../models/ClientOrganization');
+        
+        // Test if it's working by doing a simple operation
+        await ClientOrganization.findAll({ limit: 1 });
+        
+        return ClientOrganization;
+    } catch (error) {
+        console.error('❌ ClientOrganization model not working:', error.message);
+        
+        // If the model fails, create a direct database connection using the working config
+        const { sequelize } = require('../config/database');
+        const { DataTypes } = require('sequelize');
+        
+        if (sequelize && sequelize.define) {
+            console.log('🔄 Creating fresh ClientOrganization model with working database connection...');
+            
+            // Define the model directly with the working sequelize instance
+            const WorkingClientOrganization = sequelize.define('ClientOrganization', {
+                id: {
+                    type: DataTypes.INTEGER,
+                    primaryKey: true,
+                    autoIncrement: true
+                },
+                tenantId: {
+                    type: DataTypes.STRING,
+                    unique: true,
+                    allowNull: false
+                },
+                organizationName: {
+                    type: DataTypes.STRING,
+                    allowNull: false
+                },
+                domain: {
+                    type: DataTypes.STRING,
+                    allowNull: true
+                },
+                subscriptionTier: {
+                    type: DataTypes.ENUM('free', 'basic', 'premium'),
+                    defaultValue: 'free',
+                    allowNull: false
+                },
+                isActive: {
+                    type: DataTypes.BOOLEAN,
+                    defaultValue: true,
+                    allowNull: false
+                },
+                settings: {
+                    type: DataTypes.JSON,
+                    defaultValue: {},
+                    allowNull: false
+                },
+                lastActiveAt: {
+                    type: DataTypes.DATE,
+                    allowNull: true
+                },
+                userCount: {
+                    type: DataTypes.INTEGER,
+                    defaultValue: 0,
+                    allowNull: false
+                }
+            }, {
+                tableName: 'client_organizations',
+                timestamps: true
+            });
+            
+            // Add class methods
+            WorkingClientOrganization.findByTenantId = function(tenantId) {
+                return this.findOne({ where: { tenantId, isActive: true } });
+            };
+            
+            WorkingClientOrganization.getActiveOrganizations = function() {
+                return this.findAll({ where: { isActive: true } });
+            };
+            
+            // Test the connection
+            await WorkingClientOrganization.findAll({ limit: 1 });
+            console.log('✅ Fresh ClientOrganization model working');
+            
+            return WorkingClientOrganization;
+        } else {
+            throw new Error('No working database connection available');
+        }
+    }
+}
+
 // Main admin dashboard
 router.all('/', requireAdminAuth, async (req, res) => {
     try {
+        console.log('🔧 Admin dashboard accessed by:', req.adminUser);
+        
+        // Get working model
+        const ClientOrganization = await getClientOrganizationModel();
+        
+        // Load organizations from the database
+        console.log('📊 Loading organizations from database...');
         const organizations = await ClientOrganization.findAll({
             order: [['createdAt', 'DESC']]
         });
+        console.log(`✅ Loaded ${organizations.length} organizations from database`);
         
         // Calculate statistics
         const now = new Date();
@@ -22,8 +118,12 @@ router.all('/', requireAdminAuth, async (req, res) => {
         
         const stats = {
             totalOrganizations: organizations.length,
-            activeThisMonth: organizations.filter(org => org.updatedAt > lastMonth).length,
-            newThisWeek: organizations.filter(org => org.createdAt > lastWeek).length,
+            activeThisMonth: organizations.filter(org => 
+                org.updatedAt && new Date(org.updatedAt) > lastMonth
+            ).length,
+            newThisWeek: organizations.filter(org => 
+                org.createdAt && new Date(org.createdAt) > lastWeek
+            ).length,
             subscriptionBreakdown: {
                 free: organizations.filter(org => org.subscriptionTier === 'free').length,
                 basic: organizations.filter(org => org.subscriptionTier === 'basic').length,
@@ -35,13 +135,42 @@ router.all('/', requireAdminAuth, async (req, res) => {
         res.send(generateAdminHTML(organizations, stats, req.adminUser));
         
     } catch (error) {
-        console.error('Admin dashboard error:', error);
+        console.error('🚨 Admin dashboard error:', error);
+        console.error('Stack trace:', error.stack);
+        
         res.status(500).send(`
-            <html><body style="font-family: Arial; padding: 50px; text-align: center;">
-                <h2>Error Loading Dashboard</h2>
-                <p>Please try again or contact system administrator.</p>
-                <a href="/admin">Return to Login</a>
-            </body></html>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Admin Dashboard Error</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; }
+                    .error-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .error-title { color: #dc3545; margin-bottom: 20px; }
+                    .error-details { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0; }
+                    .action-links { margin-top: 20px; }
+                    .action-links a { display: inline-block; margin-right: 15px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+                </style>
+            </head>
+            <body>
+                <div class="error-container">
+                    <h2 class="error-title">🚨 Admin Dashboard Error</h2>
+                    <p>Unable to connect to the database. Please check your database configuration.</p>
+                    
+                    <div class="error-details">
+                        <strong>Error:</strong> ${error.message}<br>
+                        <strong>Time:</strong> ${new Date().toISOString()}<br>
+                        <strong>Admin User:</strong> ${req.adminUser || 'Unknown'}
+                    </div>
+                    
+                    <div class="action-links">
+                        <a href="/health">📊 Check System Health</a>
+                        <a href="/admin/status">🖥️ System Status</a>
+                        <a href="/admin/logout">🚪 Logout</a>
+                    </div>
+                </div>
+            </body>
+            </html>
         `);
     }
 });
@@ -49,65 +178,92 @@ router.all('/', requireAdminAuth, async (req, res) => {
 // Organization details
 router.get('/org/:id', requireAdminAuth, async (req, res) => {
     try {
-        const organization = await ClientOrganization.findByPk(req.params.id);
+        const ClientOrganization = await getClientOrganizationModel();
+        
+        const organization = await ClientOrganization.findByPk 
+            ? await ClientOrganization.findByPk(req.params.id)
+            : await ClientOrganization.findOne({ where: { id: req.params.id } });
         
         if (!organization) {
-            return res.status(404).send('Organization not found');
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Organization not found',
+                id: req.params.id 
+            });
         }
         
         res.json({
             success: true,
             organization: organization,
-            lastAccess: organization.updatedAt,
+            lastAccess: organization.updatedAt || organization.createdAt,
             settings: organization.settings || {}
         });
         
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch organization details' });
+        console.error('Error fetching organization:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch organization details',
+            message: error.message 
+        });
     }
 });
 
 // Usage statistics
 router.get('/usage', requireAdminAuth, async (req, res) => {
     try {
+        const ClientOrganization = await getClientOrganizationModel();
         const organizations = await ClientOrganization.findAll();
         
-        // Placeholder for usage data - you'll implement actual tracking later
-        const usageData = {
-            totalApiCalls: 'Tracking not yet implemented',
-            emailsProcessed: 'Coming in Phase 6',
-            meetingsScheduled: 'Coming in Phase 6',
-            avgSessionTime: 'Coming in Phase 6',
-            organizationUsage: organizations.map(org => ({
-                name: org.organizationName,
-                lastActive: org.updatedAt,
-                tier: org.subscriptionTier,
-                status: org.isActive
-            }))
+        const usageStats = {
+            totalOrganizations: organizations.length,
+            byTier: {
+                free: organizations.filter(org => org.subscriptionTier === 'free').length,
+                basic: organizations.filter(org => org.subscriptionTier === 'basic').length,
+                premium: organizations.filter(org => org.subscriptionTier === 'premium').length
+            },
+            activeStatus: {
+                active: organizations.filter(org => org.isActive).length,
+                inactive: organizations.filter(org => !org.isActive).length
+            },
+            recentActivity: organizations.filter(org => {
+                const lastWeek = new Date();
+                lastWeek.setDate(lastWeek.getDate() - 7);
+                return org.updatedAt && new Date(org.updatedAt) > lastWeek;
+            }).length
         };
         
         res.json({
             success: true,
-            usage: usageData,
-            generatedAt: new Date().toISOString()
+            stats: usageStats,
+            timestamp: new Date().toISOString()
         });
         
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch usage data' });
+        console.error('Usage stats error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch usage statistics',
+            message: error.message 
+        });
     }
 });
 
 // Export data
 router.get('/export', requireAdminAuth, async (req, res) => {
     try {
-        const organizations = await ClientOrganization.findAll({
-            order: [['createdAt', 'DESC']]
-        });
+        const ClientOrganization = await getClientOrganizationModel();
+        const organizations = await ClientOrganization.findAll();
+        
+        const csvHeaders = [
+            'ID', 'Tenant ID', 'Organization Name', 'Domain', 
+            'Subscription Tier', 'Status', 'User Count', 'Created', 'Updated'
+        ];
         
         const csvData = [
-            'Organization Name,Domain,Tenant ID,Subscription Tier,Status,Date Joined,Last Activity',
+            csvHeaders.join(','),
             ...organizations.map(org => 
-                `"${org.organizationName}","${org.domain || 'N/A'}","${org.tenantId}","${org.subscriptionTier}","${org.isActive ? 'Active' : 'Inactive'}","${org.createdAt.toISOString()}","${org.updatedAt.toISOString()}"`
+                `"${org.id}","${org.tenantId}","${org.organizationName}","${org.domain || ''}","${org.subscriptionTier}","${org.isActive ? 'Active' : 'Inactive'}","${org.userCount || 0}","${org.createdAt}","${org.updatedAt}"`
             )
         ].join('\n');
         
@@ -119,20 +275,53 @@ router.get('/export', requireAdminAuth, async (req, res) => {
         
     } catch (error) {
         console.error('Export error:', error);
-        res.status(500).json({ error: 'Failed to export data' });
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to export data',
+            message: error.message 
+        });
     }
 });
 
 // System status
 router.get('/status', requireAdminAuth, async (req, res) => {
     try {
+        // Test database connectivity
+        let dbStatus = 'unknown';
+        let dbError = null;
+        let orgCount = 0;
+        
+        try {
+            const ClientOrganization = await getClientOrganizationModel();
+            orgCount = await ClientOrganization.count();
+            dbStatus = 'connected';
+        } catch (error) {
+            dbStatus = 'error';
+            dbError = error.message;
+        }
+        
         const stats = {
             serverTime: new Date().toISOString(),
             uptime: process.uptime(),
             memoryUsage: process.memoryUsage(),
             nodeVersion: process.version,
             environment: process.env.NODE_ENV || 'development',
-            activeSessions: getActiveSessionsCount()
+            activeSessions: getActiveSessionsCount(),
+            database: {
+                status: dbStatus,
+                error: dbError,
+                organizationCount: orgCount
+            },
+            environmentVariables: {
+                hasAdminUsername: !!process.env.ADMIN_USERNAME,
+                hasAdminPassword: !!process.env.ADMIN_PASSWORD,
+                hasDbHost: !!process.env.DB_HOST,
+                hasDbUser: !!process.env.DB_USER,
+                hasDbPassword: !!process.env.DB_PASSWORD,
+                hasDbName: !!process.env.DB_NAME,
+                hasDatabaseUrl: !!process.env.DATABASE_URL,
+                hasAzureClientId: !!process.env.AZURE_CLIENT_ID
+            }
         };
         
         res.json({
@@ -142,6 +331,7 @@ router.get('/status', requireAdminAuth, async (req, res) => {
         });
         
     } catch (error) {
+        console.error('Status check error:', error);
         res.status(500).json({ 
             success: false, 
             status: 'error', 
@@ -222,36 +412,35 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 grid-template-columns: 2fr 1fr;
                 gap: 30px;
             }
-            .organizations-panel, .actions-panel {
+            .panel {
                 background: white;
-                padding: 25px;
                 border-radius: 12px;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                overflow: hidden;
             }
             .panel-title {
-                font-size: 1.3em;
+                background: #667eea;
+                color: white;
+                padding: 15px 20px;
                 font-weight: 600;
-                margin-bottom: 20px;
-                color: #333;
-                display: flex;
-                align-items: center;
-                gap: 10px;
+                font-size: 18px;
+            }
+            .table-container {
+                overflow-x: auto;
             }
             table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 15px;
             }
             th, td {
-                padding: 12px 8px;
+                padding: 12px;
                 text-align: left;
                 border-bottom: 1px solid #eee;
             }
             th {
                 background: #f8f9fa;
                 font-weight: 600;
-                font-size: 14px;
-                color: #666;
+                color: #333;
             }
             .status-active {
                 color: #28a745;
@@ -261,21 +450,14 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 color: #dc3545;
                 font-weight: 600;
             }
-            .tier-badge {
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: 600;
-                text-transform: uppercase;
+            .actions-panel {
+                padding: 20px;
             }
-            .tier-free { background: #e9ecef; color: #495057; }
-            .tier-basic { background: #cce7ff; color: #0066cc; }
-            .tier-premium { background: #ffe6cc; color: #cc6600; }
             .action-button {
                 display: block;
                 width: 100%;
-                padding: 12px 20px;
-                margin-bottom: 15px;
+                padding: 12px 16px;
+                margin-bottom: 10px;
                 background: #667eea;
                 color: white;
                 text-decoration: none;
@@ -299,6 +481,11 @@ function generateAdminHTML(organizations, stats, adminUser) {
             }
             .action-button.danger:hover {
                 background: #c82333;
+            }
+            .empty-state {
+                text-align: center;
+                padding: 40px;
+                color: #666;
             }
             .refresh-note {
                 text-align: center;
@@ -345,43 +532,54 @@ function generateAdminHTML(organizations, stats, adminUser) {
                     <div class="stat-label">New This Week</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${stats.subscriptionBreakdown.premium}</div>
-                    <div class="stat-label">Premium Clients</div>
+                    <div class="stat-value">${stats.activeSessions}</div>
+                    <div class="stat-label">Active Admin Sessions</div>
                 </div>
             </div>
             
             <div class="main-content">
-                <div class="organizations-panel">
+                <div class="panel">
                     <div class="panel-title">
-                        📊 Recent Organizations
+                        🏢 Organizations
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Organization</th>
-                                <th>Domain</th>
-                                <th>Tier</th>
-                                <th>Status</th>
-                                <th>Joined</th>
-                                <th>Last Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${recentOrgs.map(org => `
-                                <tr>
-                                    <td><strong>${org.organizationName}</strong></td>
-                                    <td>${org.domain || 'N/A'}</td>
-                                    <td><span class="tier-badge tier-${org.subscriptionTier}">${org.subscriptionTier}</span></td>
-                                    <td class="${org.isActive ? 'status-active' : 'status-inactive'}">
-                                        ${org.isActive ? 'Active' : 'Inactive'}
-                                    </td>
-                                    <td>${new Date(org.createdAt).toLocaleDateString()}</td>
-                                    <td>${new Date(org.updatedAt).toLocaleDateString()}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    ${organizations.length > 10 ? `<p style="text-align: center; margin-top: 15px; color: #666;">Showing 10 of ${organizations.length} organizations</p>` : ''}
+                    ${organizations.length === 0 ? `
+                        <div class="empty-state">
+                            <h3>No Organizations Yet</h3>
+                            <p>Organizations will appear here when clients start using the AI Email Agent.</p>
+                        </div>
+                    ` : `
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Organization</th>
+                                        <th>Domain</th>
+                                        <th>Tier</th>
+                                        <th>Status</th>
+                                        <th>Users</th>
+                                        <th>Created</th>
+                                        <th>Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${recentOrgs.map(org => `
+                                        <tr>
+                                            <td><strong>${org.organizationName}</strong></td>
+                                            <td>${org.domain || '-'}</td>
+                                            <td><span style="text-transform: capitalize;">${org.subscriptionTier}</span></td>
+                                            <td class="${org.isActive ? 'status-active' : 'status-inactive'}">
+                                                ${org.isActive ? 'Active' : 'Inactive'}
+                                            </td>
+                                            <td>${org.userCount || 0}</td>
+                                            <td>${new Date(org.createdAt).toLocaleDateString()}</td>
+                                            <td>${new Date(org.updatedAt).toLocaleDateString()}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            ${organizations.length > 10 ? `<p style="text-align: center; margin-top: 15px; color: #666;">Showing 10 of ${organizations.length} organizations</p>` : ''}
+                        </div>
+                    `}
                 </div>
                 
                 <div class="actions-panel">
