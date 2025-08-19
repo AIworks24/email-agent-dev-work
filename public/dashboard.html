@@ -726,143 +726,76 @@
                 font-style: italic;
                 font-weight: 500;
             }
-            
-            /* Force all text within containers to be white and readable */
-            .content-section * {
-                color: white !important;
-            }
-            
-            .stat-card * {
-                color: white !important;
-            }
-            
-            .response-area {
-                color: white !important;
-                background: rgba(0, 0, 0, 0.7) !important;
-                border: 2px solid #667eea !important;
-            }
-            
-            /* Form elements */
-            .form-input, .form-select, .form-textarea {
-                color: white !important;
-                background: rgba(0, 0, 0, 0.5) !important;
-                border: 2px solid #667eea !important;
-            }
-            
-            .form-input::placeholder,
-            .form-select::placeholder,
-            .form-textarea::placeholder {
-                color: rgba(255, 255, 255, 0.7) !important;
-            }
-            
-            .form-label {
-                color: white !important;
-                font-weight: 600 !important;
-            }
-            
-            /* Email list items */
-            .email-subject, .email-from, .email-preview, .email-meta {
-                color: white !important;
-            }
-            
-            /* Section titles and content */
-            .section-title {
-                color: white !important;
-            }
-            
-            .section-subtitle {
-                color: rgba(255, 255, 255, 0.8) !important;
-            }
-            
-            /* Status messages */
-            .status-message {
-                color: white !important;
-                background: rgba(0, 0, 0, 0.6) !important;
-            }
-            
-            /* Quick actions text - keep white */
-            .quick-action {
-                color: white !important;
-            }
-            
-            /* Ensure all paragraphs and divs in content sections are white */
-            .content-section p,
-            .content-section div,
-            .content-section span,
-            .content-section label {
-                color: white !important;
-            }
-            
-            /* Meeting form text */
-            .meeting-form * {
-                color: white !important;
-            }
-            
-            .meeting-form {
-                background: rgba(0, 0, 0, 0.6) !important;
-            }
-            
-            /* Override any inherited text colors */
-            body, html {
-                color: white !important;
-            }
-            
-            /* Dark backgrounds for contrast with white text */
-            .content-section {
-                background: rgba(0, 0, 0, 0.7) !important;
-                color: white !important;
-            }
-            
-            .stat-card {
-                background: rgba(0, 0, 0, 0.7) !important;
-                color: white !important;
-            }
-            
-            /* Email list styling for white text */
-            .email-list {
-                background: rgba(0, 0, 0, 0.6) !important;
-            }
-            
-            .email-item {
-                background: rgba(0, 0, 0, 0.4) !important;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-            }
-            
-            .email-item:hover {
-                background: rgba(0, 0, 0, 0.6) !important;
-            }
-            
-            /* Sidebar white text */
-            .sidebar * {
-                color: white !important;
-            }
-            
-            .sidebar {
-                background: rgba(0, 0, 0, 0.7) !important;
-            }
         }
 
-        /* Dark mode support */
+                /* Enhanced Dark mode support */
         @media (prefers-color-scheme: dark) {
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-                color: #e0e0e0;
+                color: #ffffff;
             }
             
             .sidebar, .content-section, .stat-card {
                 background: #2a2a2a;
-                color: #e0e0e0;
+                color: #ffffff;
+                border: 1px solid #4a4a4a;
             }
             
             .form-input, .form-select, .form-textarea {
                 background: #3a3a3a;
-                border-color: #4a4a4a;
-                color: #e0e0e0;
+                border-color: #667eea;
+                color: #ffffff;
+            }
+            
+            .form-input::placeholder,
+            .form-select::placeholder, 
+            .form-textarea::placeholder {
+                color: #cccccc;
             }
             
             .response-area {
                 background: #3a3a3a;
+                border-color: #667eea;
+                color: #ffffff;
+            }
+            
+            .form-label {
+                color: #ffffff;
+            }
+            
+            .section-title {
+                color: #ffffff;
+            }
+            
+            .section-subtitle {
+                color: #cccccc;
+            }
+            
+            .email-subject, .email-from, .email-preview, .email-meta {
+                color: #ffffff;
+            }
+            
+            .email-list {
+                background: #2a2a2a;
                 border-color: #4a4a4a;
+            }
+            
+            .email-item {
+                background: #2a2a2a;
+                border-bottom: 1px solid #4a4a4a;
+                color: #ffffff;
+            }
+            
+            .email-item:hover {
+                background: #3a3a3a;
+            }
+            
+            .stat-value {
+                color: #ffffff;
+            }
+            
+            .stat-label {
+                color: #ffffff;
             }
         }
     </style>
