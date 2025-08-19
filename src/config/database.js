@@ -16,10 +16,61 @@ function createSequelizeInstance() {
         pgAvailable = false;
     }
 
+    // Try individual components first (no URL encoding issues)
+    if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME && pgAvailable) {
+        try {
+            console.log('🔗 Attempting PostgreSQL connection with individual components...');
+            console.log(`📍 Host: ${process.env.DB_HOST}`);
+            console.log(`👤 User: ${process.env.DB_USER}`);
+            console.log(`🗄️ Database: ${process.env.DB_NAME}`);
+            console.log(`🔑 Password length: ${process.env.DB_PASSWORD.length}`);
+            
+            sequelize = new Sequelize(
+                process.env.DB_NAME,
+                process.env.DB_USER,
+                process.env.DB_PASSWORD,
+                {
+                    host: process.env.DB_HOST,
+                    port: process.env.DB_PORT || 5432,
+                    dialect: 'postgres',
+                    dialectOptions: {
+                        ssl: process.env.NODE_ENV === 'production' ? {
+                            require: true,
+                            rejectUnauthorized: false
+                        } : false
+                    },
+                    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+                    pool: {
+                        max: 5,
+                        min: 0,
+                        acquire: 30000,
+                        idle: 10000
+                    },
+                    retry: {
+                        match: [
+                            /ConnectionError/,
+                            /ConnectionRefusedError/,
+                            /ConnectionTimedOutError/,
+                            /TimeoutError/,
+                            /HostNotFoundError/
+                        ],
+                        max: 3
+                    }
+                }
+            );
+            console.log('✅ PostgreSQL setup with individual components successful');
+            return;
+        } catch (error) {
+            console.error('❌ PostgreSQL setup with components failed:', error.message);
+        }
+    }
+
+    // Fallback to DATABASE_URL if components not available
     if (process.env.DATABASE_URL && pgAvailable) {
         try {
-            console.log('🔗 Attempting PostgreSQL connection...');
+            console.log('🔗 Attempting PostgreSQL connection with DATABASE_URL...');
             const dbUrl = process.env.DATABASE_URL.trim();
+            console.log('📍 URL format check:', dbUrl.substring(0, 50) + '...');
             
             sequelize = new Sequelize(dbUrl, {
                 dialect: 'postgres',
@@ -42,54 +93,39 @@ function createSequelizeInstance() {
                         /ConnectionRefusedError/,
                         /ConnectionTimedOutError/,
                         /TimeoutError/,
-                        /Error: Please install pg package manually/
+                        /HostNotFoundError/,
+                        /URI malformed/
                     ],
                     max: 3
                 }
             });
+            console.log('✅ PostgreSQL setup with DATABASE_URL successful');
+            return;
         } catch (error) {
-            console.error('❌ PostgreSQL setup failed:', error.message);
-            console.log('🔄 Falling back to SQLite...');
-            createFallbackSequelize();
+            console.error('❌ PostgreSQL setup with DATABASE_URL failed:', error.message);
         }
-    } else {
-        console.log('🔄 Using SQLite fallback (no DATABASE_URL or pg package issues)');
-        createFallbackSequelize();
     }
+
+    // If nothing works, fall back to mock
+    console.log('🔄 Falling back to mock database...');
+    createFallbackSequelize();
 }
 
 function createFallbackSequelize() {
-    console.log('📦 Setting up SQLite fallback database...');
+    console.log('📦 Setting up mock database...');
     
-    // Check if sqlite3 is available, if not use memory storage
-    let sqliteAvailable = false;
-    try {
-        require('sqlite3');
-        sqliteAvailable = true;
-    } catch (error) {
-        console.warn('⚠️ SQLite3 not available, using in-memory storage');
-    }
-
-    if (sqliteAvailable) {
-        sequelize = new Sequelize({
-            dialect: 'sqlite',
-            storage: ':memory:',
-            logging: false
-        });
-    } else {
-        // Ultra-minimal fallback - just create a mock sequelize-like object
-        sequelize = {
-            authenticate: () => Promise.resolve(),
-            sync: () => Promise.resolve(),
-            getDialect: () => 'mock',
-            define: () => ({
-                findAll: () => Promise.resolve([]),
-                create: () => Promise.resolve({}),
-                findOne: () => Promise.resolve(null)
-            })
-        };
-        console.log('⚠️ Using minimal mock database (no persistence)');
-    }
+    // Ultra-minimal fallback - create a mock sequelize-like object
+    sequelize = {
+        authenticate: () => Promise.resolve(),
+        sync: () => Promise.resolve(),
+        getDialect: () => 'mock',
+        define: () => ({
+            findAll: () => Promise.resolve([]),
+            create: () => Promise.resolve({}),
+            findOne: () => Promise.resolve(null)
+        })
+    };
+    console.log('⚠️ Using minimal mock database (no persistence)');
 }
 
 // Initialize Sequelize
@@ -109,10 +145,11 @@ async function testConnection() {
         }
     } catch (err) {
         console.error('❌ Database connection failed:', err.message);
+        console.error('🔍 Error details:', err.parent?.message || 'No additional details');
         
         // If PostgreSQL fails, try fallback
-        if (err.message.includes('pg package') || err.message.includes('PostgreSQL')) {
-            console.log('🔄 PostgreSQL driver issue detected, switching to SQLite...');
+        if (err.message.includes('URI malformed') || err.message.includes('ENOTFOUND') || err.message.includes('HostNotFound')) {
+            console.log('🔄 Database connection issue detected, switching to mock...');
             createFallbackSequelize();
             try {
                 if (typeof sequelize.authenticate === 'function') {
