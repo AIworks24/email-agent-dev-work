@@ -412,7 +412,14 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
-
+        
+        /* Checkbox styling */
+        .email-checkbox, #select-all-emails {
+            transform: scale(1.2);
+            accent-color: #667eea;
+            cursor: pointer;
+        }
+        
         /* Email List */
         .email-list {
             max-height: 400px;
@@ -424,8 +431,8 @@
         }
 
         .email-item {
-            padding: 1.5rem;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 1rem;
+            border-bottom: 1px solid #e1e5e9;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
@@ -437,7 +444,7 @@
         }
 
         .email-item.selected {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            background: #e3f2fd;
             border-left: 4px solid #667eea;
         }
 
@@ -479,8 +486,23 @@
             font-size: 0.8rem;
             color: #999;
         }
+        /* Move button styling */
+        #move-selected-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-        /* Meeting Form */
+        #move-selected-btn:not(:disabled):hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        /* Controls section styling */
+        #email-controls {
+            border: 1px solid #e1e5e9;
+        }
+        
+            /* Meeting Form */
         .meeting-form {
             background: #f8f9fa;
             border: 2px solid #e1e5e9;
@@ -556,6 +578,15 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Selected count styling */
+        #selected-count {
+            font-weight: 500;
+            padding: 0.25rem 0.5rem;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
 
         /* Logout Button */
         .logout-btn {
@@ -583,6 +614,18 @@
             }
         }
 
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #email-controls {
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: stretch;
+            }
+    
+            #email-controls > div {
+                justify-content: center;
+            }
+        }
         @media (max-width: 768px) {
             .dashboard-container {
                 grid-template-columns: 1fr;
