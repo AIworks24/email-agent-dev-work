@@ -682,6 +682,70 @@ app.post('/api/emails/:emailId/send', async (req, res) => {
     }
 });
 
+// Move selected emails to deleted items (soft delete)
+app.post('/api/emails/move-selected-to-trash', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { emailIds } = req.body;
+        
+        if (!emailIds || !Array.isArray(emailIds) || emailIds.length === 0) {
+            return res.status(400).json({ error: 'Email IDs array is required' });
+        }
+        
+        const graphClient = createGraphClient(accessToken);
+        const results = [];
+        
+        // Move each selected email to deleted items folder
+        for (const emailId of emailIds) {
+            try {
+                await graphClient
+                    .api(`/me/messages/${emailId}/move`)
+                    .post({
+                        destinationId: 'deleteditems'
+                    });
+                
+                results.push({
+                    emailId: emailId,
+                    success: true,
+                    message: 'Moved to deleted items'
+                });
+            } catch (error) {
+                console.error(`Error moving email ${emailId}:`, error);
+                results.push({
+                    emailId: emailId,
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+        
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+        
+        res.json({
+            success: true,
+            message: `Moved ${successCount} emails to deleted items${failCount > 0 ? `, ${failCount} failed` : ''}`,
+            results: results,
+            summary: {
+                total: emailIds.length,
+                successful: successCount,
+                failed: failCount
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error in move to trash operation:', error);
+        res.status(500).json({ 
+            error: 'Failed to move emails to deleted items', 
+            message: error.message 
+        });
+    }
+});
+
 app.post('/api/calendar/analyze', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
