@@ -1,96 +1,118 @@
 const express = require('express');
 const { requireAdminAuth, logoutAdmin, getActiveSessionsCount } = require('../middleware/adminAuth');
+const { Sequelize, DataTypes } = require('sequelize');
 const router = express.Router();
 
 // Middleware to parse form data
 router.use(express.urlencoded({ extended: true }));
 
-// Function to get working ClientOrganization model
-async function getClientOrganizationModel() {
-    try {
-        // First try to get the model
-        const ClientOrganization = require('../models/ClientOrganization');
+// Create a direct database connection for admin routes
+function createAdminDatabaseConnection() {
+    console.log('🔧 Creating admin database connection...');
+    
+    // Use the same individual components that work for your main app
+    if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME) {
+        console.log('🔗 Using individual DB components for admin...');
+        console.log(`📍 Host: ${process.env.DB_HOST}`);
+        console.log(`👤 User: ${process.env.DB_USER}`);
+        console.log(`🗄️ Database: ${process.env.DB_NAME}`);
         
-        // Test if it's working by doing a simple operation
-        await ClientOrganization.findAll({ limit: 1 });
+        const adminSequelize = new Sequelize(
+            process.env.DB_NAME,
+            process.env.DB_USER,
+            process.env.DB_PASSWORD,
+            {
+                host: process.env.DB_HOST,
+                port: process.env.DB_PORT || 5432,
+                dialect: 'postgres',
+                dialectOptions: {
+                    ssl: process.env.NODE_ENV === 'production' ? {
+                        require: true,
+                        rejectUnauthorized: false
+                    } : false
+                },
+                logging: process.env.NODE_ENV === 'development' ? console.log : false,
+                pool: {
+                    max: 5,
+                    min: 0,
+                    acquire: 30000,
+                    idle: 10000
+                }
+            }
+        );
+        
+        // Define the ClientOrganization model specifically for admin
+        const AdminClientOrganization = adminSequelize.define('ClientOrganization', {
+            id: {
+                type: DataTypes.INTEGER,
+                primaryKey: true,
+                autoIncrement: true
+            },
+            tenantId: {
+                type: DataTypes.STRING,
+                unique: true,
+                allowNull: false
+            },
+            organizationName: {
+                type: DataTypes.STRING,
+                allowNull: false
+            },
+            domain: {
+                type: DataTypes.STRING,
+                allowNull: true
+            },
+            subscriptionTier: {
+                type: DataTypes.ENUM('free', 'basic', 'premium'),
+                defaultValue: 'free',
+                allowNull: false
+            },
+            isActive: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: true,
+                allowNull: false
+            },
+            settings: {
+                type: DataTypes.JSON,
+                defaultValue: {},
+                allowNull: false
+            },
+            lastActiveAt: {
+                type: DataTypes.DATE,
+                allowNull: true
+            },
+            userCount: {
+                type: DataTypes.INTEGER,
+                defaultValue: 0,
+                allowNull: false
+            }
+        }, {
+            tableName: 'client_organizations',
+            timestamps: true
+        });
+        
+        return { sequelize: adminSequelize, ClientOrganization: AdminClientOrganization };
+    } else {
+        throw new Error('Database configuration missing - need DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
+    }
+}
+
+// Test and get admin database connection
+async function getAdminDatabase() {
+    try {
+        const { sequelize, ClientOrganization } = createAdminDatabaseConnection();
+        
+        // Test the connection
+        await sequelize.authenticate();
+        console.log('✅ Admin database connection successful');
+        
+        // Sync the model (create table if it doesn't exist)
+        await ClientOrganization.sync();
+        console.log('✅ Admin ClientOrganization model synced');
         
         return ClientOrganization;
     } catch (error) {
-        console.error('❌ ClientOrganization model not working:', error.message);
-        
-        // If the model fails, create a direct database connection using the working config
-        const { sequelize } = require('../config/database');
-        const { DataTypes } = require('sequelize');
-        
-        if (sequelize && sequelize.define) {
-            console.log('🔄 Creating fresh ClientOrganization model with working database connection...');
-            
-            // Define the model directly with the working sequelize instance
-            const WorkingClientOrganization = sequelize.define('ClientOrganization', {
-                id: {
-                    type: DataTypes.INTEGER,
-                    primaryKey: true,
-                    autoIncrement: true
-                },
-                tenantId: {
-                    type: DataTypes.STRING,
-                    unique: true,
-                    allowNull: false
-                },
-                organizationName: {
-                    type: DataTypes.STRING,
-                    allowNull: false
-                },
-                domain: {
-                    type: DataTypes.STRING,
-                    allowNull: true
-                },
-                subscriptionTier: {
-                    type: DataTypes.ENUM('free', 'basic', 'premium'),
-                    defaultValue: 'free',
-                    allowNull: false
-                },
-                isActive: {
-                    type: DataTypes.BOOLEAN,
-                    defaultValue: true,
-                    allowNull: false
-                },
-                settings: {
-                    type: DataTypes.JSON,
-                    defaultValue: {},
-                    allowNull: false
-                },
-                lastActiveAt: {
-                    type: DataTypes.DATE,
-                    allowNull: true
-                },
-                userCount: {
-                    type: DataTypes.INTEGER,
-                    defaultValue: 0,
-                    allowNull: false
-                }
-            }, {
-                tableName: 'client_organizations',
-                timestamps: true
-            });
-            
-            // Add class methods
-            WorkingClientOrganization.findByTenantId = function(tenantId) {
-                return this.findOne({ where: { tenantId, isActive: true } });
-            };
-            
-            WorkingClientOrganization.getActiveOrganizations = function() {
-                return this.findAll({ where: { isActive: true } });
-            };
-            
-            // Test the connection
-            await WorkingClientOrganization.findAll({ limit: 1 });
-            console.log('✅ Fresh ClientOrganization model working');
-            
-            return WorkingClientOrganization;
-        } else {
-            throw new Error('No working database connection available');
-        }
+        console.error('❌ Admin database connection failed:', error.message);
+        throw error;
     }
 }
 
@@ -99,8 +121,8 @@ router.all('/', requireAdminAuth, async (req, res) => {
     try {
         console.log('🔧 Admin dashboard accessed by:', req.adminUser);
         
-        // Get working model
-        const ClientOrganization = await getClientOrganizationModel();
+        // Get fresh database connection for admin
+        const ClientOrganization = await getAdminDatabase();
         
         // Load organizations from the database
         console.log('📊 Loading organizations from database...');
@@ -147,9 +169,10 @@ router.all('/', requireAdminAuth, async (req, res) => {
                     body { font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; }
                     .error-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
                     .error-title { color: #dc3545; margin-bottom: 20px; }
-                    .error-details { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0; }
+                    .error-details { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0; font-family: monospace; }
                     .action-links { margin-top: 20px; }
                     .action-links a { display: inline-block; margin-right: 15px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+                    .env-check { background: #fff3cd; padding: 15px; border-radius: 4px; margin: 15px 0; }
                 </style>
             </head>
             <body>
@@ -161,6 +184,15 @@ router.all('/', requireAdminAuth, async (req, res) => {
                         <strong>Error:</strong> ${error.message}<br>
                         <strong>Time:</strong> ${new Date().toISOString()}<br>
                         <strong>Admin User:</strong> ${req.adminUser || 'Unknown'}
+                    </div>
+                    
+                    <div class="env-check">
+                        <strong>Environment Variables Check:</strong><br>
+                        DB_HOST: ${process.env.DB_HOST ? '✅ Set' : '❌ Missing'}<br>
+                        DB_USER: ${process.env.DB_USER ? '✅ Set' : '❌ Missing'}<br>
+                        DB_PASSWORD: ${process.env.DB_PASSWORD ? '✅ Set' : '❌ Missing'}<br>
+                        DB_NAME: ${process.env.DB_NAME ? '✅ Set' : '❌ Missing'}<br>
+                        DB_PORT: ${process.env.DB_PORT || '5432 (default)'}
                     </div>
                     
                     <div class="action-links">
@@ -175,44 +207,10 @@ router.all('/', requireAdminAuth, async (req, res) => {
     }
 });
 
-// Organization details
-router.get('/org/:id', requireAdminAuth, async (req, res) => {
-    try {
-        const ClientOrganization = await getClientOrganizationModel();
-        
-        const organization = await ClientOrganization.findByPk 
-            ? await ClientOrganization.findByPk(req.params.id)
-            : await ClientOrganization.findOne({ where: { id: req.params.id } });
-        
-        if (!organization) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Organization not found',
-                id: req.params.id 
-            });
-        }
-        
-        res.json({
-            success: true,
-            organization: organization,
-            lastAccess: organization.updatedAt || organization.createdAt,
-            settings: organization.settings || {}
-        });
-        
-    } catch (error) {
-        console.error('Error fetching organization:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Failed to fetch organization details',
-            message: error.message 
-        });
-    }
-});
-
 // Usage statistics
 router.get('/usage', requireAdminAuth, async (req, res) => {
     try {
-        const ClientOrganization = await getClientOrganizationModel();
+        const ClientOrganization = await getAdminDatabase();
         const organizations = await ClientOrganization.findAll();
         
         const usageStats = {
@@ -252,7 +250,7 @@ router.get('/usage', requireAdminAuth, async (req, res) => {
 // Export data
 router.get('/export', requireAdminAuth, async (req, res) => {
     try {
-        const ClientOrganization = await getClientOrganizationModel();
+        const ClientOrganization = await getAdminDatabase();
         const organizations = await ClientOrganization.findAll();
         
         const csvHeaders = [
@@ -292,7 +290,7 @@ router.get('/status', requireAdminAuth, async (req, res) => {
         let orgCount = 0;
         
         try {
-            const ClientOrganization = await getClientOrganizationModel();
+            const ClientOrganization = await getAdminDatabase();
             orgCount = await ClientOrganization.count();
             dbStatus = 'connected';
         } catch (error) {
@@ -319,6 +317,7 @@ router.get('/status', requireAdminAuth, async (req, res) => {
                 hasDbUser: !!process.env.DB_USER,
                 hasDbPassword: !!process.env.DB_PASSWORD,
                 hasDbName: !!process.env.DB_NAME,
+                hasDbPort: !!process.env.DB_PORT,
                 hasDatabaseUrl: !!process.env.DATABASE_URL,
                 hasAzureClientId: !!process.env.AZURE_CLIENT_ID
             }
@@ -336,6 +335,37 @@ router.get('/status', requireAdminAuth, async (req, res) => {
             success: false, 
             status: 'error', 
             error: error.message 
+        });
+    }
+});
+
+// Organization details
+router.get('/org/:id', requireAdminAuth, async (req, res) => {
+    try {
+        const ClientOrganization = await getAdminDatabase();
+        const organization = await ClientOrganization.findByPk(req.params.id);
+        
+        if (!organization) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Organization not found',
+                id: req.params.id 
+            });
+        }
+        
+        res.json({
+            success: true,
+            organization: organization,
+            lastAccess: organization.updatedAt || organization.createdAt,
+            settings: organization.settings || {}
+        });
+        
+    } catch (error) {
+        console.error('Error fetching organization:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch organization details',
+            message: error.message 
         });
     }
 });
@@ -381,6 +411,14 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 margin: 0 auto;
                 padding: 30px;
             }
+            .success-banner {
+                background: #d4edda;
+                color: #155724;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                border: 1px solid #c3e6cb;
+            }
             .stats-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -392,12 +430,12 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 padding: 25px;
                 border-radius: 12px;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-                border-left: 4px solid #667eea;
+                border-left: 4px solid #28a745;
             }
             .stat-value {
                 font-size: 2.5em;
                 font-weight: bold;
-                color: #667eea;
+                color: #28a745;
                 line-height: 1;
             }
             .stat-label {
@@ -419,7 +457,7 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 overflow: hidden;
             }
             .panel-title {
-                background: #667eea;
+                background: #28a745;
                 color: white;
                 padding: 15px 20px;
                 font-weight: 600;
@@ -458,7 +496,7 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 width: 100%;
                 padding: 12px 16px;
                 margin-bottom: 10px;
-                background: #667eea;
+                background: #28a745;
                 color: white;
                 text-decoration: none;
                 border-radius: 8px;
@@ -467,7 +505,7 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 transition: background 0.3s;
             }
             .action-button:hover {
-                background: #5a67d8;
+                background: #218838;
                 color: white;
             }
             .action-button.secondary {
@@ -518,6 +556,10 @@ function generateAdminHTML(organizations, stats, adminUser) {
         </div>
         
         <div class="container">
+            <div class="success-banner">
+                ✅ <strong>Database Connected:</strong> Admin dashboard is now connected to your production database and ready for live client data.
+            </div>
+            
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value">${stats.totalOrganizations}</div>
@@ -540,12 +582,12 @@ function generateAdminHTML(organizations, stats, adminUser) {
             <div class="main-content">
                 <div class="panel">
                     <div class="panel-title">
-                        🏢 Organizations
+                        🏢 Client Organizations
                     </div>
                     ${organizations.length === 0 ? `
                         <div class="empty-state">
-                            <h3>No Organizations Yet</h3>
-                            <p>Organizations will appear here when clients start using the AI Email Agent.</p>
+                            <h3>Ready for Client Organizations</h3>
+                            <p>Client organizations will appear here when they start using the AI Email Agent. The database is connected and ready to receive live data.</p>
                         </div>
                     ` : `
                         <div class="table-container">
@@ -608,17 +650,18 @@ function generateAdminHTML(organizations, stats, adminUser) {
                     </a>
                     
                     <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <h4 style="margin: 0 0 10px 0; color: #333;">Quick Stats</h4>
+                        <h4 style="margin: 0 0 10px 0; color: #333;">Subscription Breakdown</h4>
                         <p style="margin: 5px 0; font-size: 14px;">Free: ${stats.subscriptionBreakdown.free}</p>
                         <p style="margin: 5px 0; font-size: 14px;">Basic: ${stats.subscriptionBreakdown.basic}</p>
                         <p style="margin: 5px 0; font-size: 14px;">Premium: ${stats.subscriptionBreakdown.premium}</p>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
                         <p style="margin: 5px 0; font-size: 14px;">Admin Sessions: ${stats.activeSessions}</p>
                     </div>
                 </div>
             </div>
             
             <div class="refresh-note">
-                Dashboard updates in real-time. Last refresh: ${new Date().toLocaleString()}
+                Production database connected. Last refresh: ${new Date().toLocaleString()}
             </div>
         </div>
     </body>
