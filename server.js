@@ -212,6 +212,9 @@ app.get('/auth/debug', (req, res) => {
     });
 });
 
+const adminRoutes = require('./src/routes/admin');
+app.use('/admin', adminRoutes);
+
 app.get('/api/debug/graph', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     
