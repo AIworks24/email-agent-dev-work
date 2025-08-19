@@ -54,6 +54,8 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            color: white;
+            font-weight: 500;
         }
 
         .user-avatar {
@@ -191,8 +193,10 @@
         }
 
         .stat-label {
-            color: #666;
+            color: #333;
             font-size: 0.9rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -464,13 +468,14 @@
 
         .email-from {
             font-size: 0.9rem;
-            color: #666;
+            color: #333;
             margin-bottom: 0.5rem;
+            font-weight: 500; 
         }
 
         .email-preview {
             font-size: 0.85rem;
-            color: #888;
+            color: #555;
             line-height: 1.4;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -484,7 +489,8 @@
             align-items: center;
             margin-top: 0.5rem;
             font-size: 0.8rem;
-            color: #999;
+            color: #666;
+            font-weight: 500;
         }
         /* Move button styling */
         #move-selected-btn:disabled {
@@ -679,6 +685,46 @@
             
             .quick-action {
                 padding: 1rem;
+            }
+            /* 6. ADD this new CSS to improve section titles */
+            .card h2 {
+                margin-bottom: 1rem;
+                color: #333; /* Ensure dark text */
+                border-bottom: 2px solid #667eea;
+                padding-bottom: 0.5rem;
+                font-weight: 600; /* Make titles bolder */
+            }
+            
+            /* 7. ADD this to improve form labels */
+            input[type="text"], input[type="email"], input[type="datetime-local"], select, textarea {
+                flex: 1;
+                padding: 12px;
+                border: 2px solid #e1e5e9;
+                border-radius: 8px;
+                font-size: 1rem;
+                color: #333; /* Ensure dark text in form fields */
+                background: white; /* Ensure white background */
+            }
+            
+            /* 8. ADD this to improve response area text */
+            .response-area {
+                background: #f8f9fa;
+                border: 1px solid #e1e5e9;
+                border-radius: 8px;
+                padding: 1rem;
+                min-height: 150px;
+                font-family: inherit;
+                margin-bottom: 1rem;
+                line-height: 1.6;
+                color: #333; /* Ensure dark text */
+            }
+            
+            /* 9. ADD this to improve loading text visibility */
+            .loading {
+                text-align: center;
+                color: #333; /* Change from #6c757d to #333 */
+                font-style: italic;
+                font-weight: 500;
             }
         }
 
@@ -1453,24 +1499,49 @@
             }
         }
 
-        function displayEmailList(emails) {
-            const emailList = document.getElementById('email-list');
-            emailList.innerHTML = '';
-            
-            if (emails.length === 0) {
-                emailList.innerHTML = '<div style="padding: 2rem; text-align: center; color: #666;">No recent emails found</div>';
-                return;
-            }
-            
-            emails.forEach(email => {
-                const emailItem = document.createElement('div');
-                emailItem.className = 'email-item';
-                emailItem.onclick = () => selectEmail(email.id, emailItem, email);
-                
-                const unreadBadge = !email.isRead ? '🔵 ' : '';
-                const attachmentBadge = email.hasAttachments ? '📎 ' : '';
-                
-                emailItem.innerHTML = `
+        // ADD THESE FUNCTIONS TO YOUR EXISTING dashboard.html JavaScript section
+
+// UPDATE your existing displayEmailList function to include checkboxes:
+function displayEmailList(emails) {
+    const emailList = document.getElementById('email-list');
+    emailList.innerHTML = '';
+    
+    if (emails.length === 0) {
+        emailList.innerHTML = '<div style="padding: 2rem; text-align: center; color: #666;">No recent emails found</div>';
+        return;
+    }
+    
+    // Add "Select All" and "Move Selected" controls at the top
+    const controlsDiv = document.createElement('div');
+    controlsDiv.id = 'email-controls';
+    controlsDiv.style.cssText = 'background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; justify-content: space-between;';
+    controlsDiv.innerHTML = `
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: #333;">
+                <input type="checkbox" id="select-all-emails" onchange="toggleAllEmails(this.checked)">
+                Select All Emails
+            </label>
+            <span id="selected-count" style="color: #666; font-size: 0.9rem;">0 selected</span>
+        </div>
+        <button id="move-selected-btn" class="btn btn-secondary" onclick="moveSelectedToTrash()" disabled>
+            📁 Move Selected to Deleted Items
+        </button>
+    `;
+    emailList.appendChild(controlsDiv);
+    
+    // Add each email with checkbox
+    emails.forEach(email => {
+        const emailItem = document.createElement('div');
+        emailItem.className = 'email-item';
+        emailItem.dataset.emailId = email.id;
+        
+        const unreadBadge = !email.isRead ? '🔵 ' : '';
+        const attachmentBadge = email.hasAttachments ? '📎 ' : '';
+        
+        emailItem.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                <input type="checkbox" class="email-checkbox" value="${email.id}" onchange="updateSelectedCount()" style="margin-top: 0.5rem;">
+                <div style="flex: 1; cursor: pointer;" onclick="selectEmail('${email.id}', this.closest('.email-item'), ${JSON.stringify(email).replace(/"/g, '&quot;')})">
                     <div class="email-subject">${unreadBadge}${attachmentBadge}${email.subject || 'No Subject'}</div>
                     <div class="email-from">From: ${email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown'}</div>
                     <div class="email-preview">${email.bodyPreview || 'No preview available'}</div>
@@ -1478,11 +1549,134 @@
                         <span>${new Date(email.receivedDateTime).toLocaleDateString()}</span>
                         <span>${email.isRead ? 'Read' : 'Unread'}</span>
                     </div>
-                `;
-                
-                emailList.appendChild(emailItem);
+                </div>
+            </div>
+        `;
+        
+        emailList.appendChild(emailItem);
+    });
+}
+
+// Function to toggle all email checkboxes
+function toggleAllEmails(checked) {
+    const checkboxes = document.querySelectorAll('.email-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+    updateSelectedCount();
+}
+
+// Function to update the selected count and button state
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.email-checkbox');
+    const checkedBoxes = document.querySelectorAll('.email-checkbox:checked');
+    
+    const selectedCount = checkedBoxes.length;
+    const totalCount = checkboxes.length;
+    
+    // Update count display
+    document.getElementById('selected-count').textContent = `${selectedCount} selected`;
+    
+    // Update move button state
+    const moveBtn = document.getElementById('move-selected-btn');
+    moveBtn.disabled = selectedCount === 0;
+    moveBtn.textContent = selectedCount > 0 ? `📁 Move ${selectedCount} to Deleted Items` : '📁 Move Selected to Deleted Items';
+    
+    // Update select all checkbox state
+    const selectAllCheckbox = document.getElementById('select-all-emails');
+    if (selectedCount === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (selectedCount === totalCount) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+// Function to move selected emails to trash
+async function moveSelectedToTrash() {
+    const checkedBoxes = document.querySelectorAll('.email-checkbox:checked');
+    const selectedEmailIds = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    if (selectedEmailIds.length === 0) {
+        alert('Please select emails to move to deleted items');
+        return;
+    }
+    
+    if (!confirm(`Move ${selectedEmailIds.length} selected emails to deleted items?`)) {
+        return;
+    }
+    
+    try {
+        // Show loading state
+        const moveBtn = document.getElementById('move-selected-btn');
+        const originalText = moveBtn.textContent;
+        moveBtn.innerHTML = '<span class="loading-spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></span> Moving emails...';
+        moveBtn.disabled = true;
+        
+        const response = await fetch('/api/emails/move-selected-to-trash', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ emailIds: selectedEmailIds })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Remove moved emails from the UI with animation
+            selectedEmailIds.forEach(emailId => {
+                const emailElement = document.querySelector(`[data-email-id="${emailId}"]`);
+                if (emailElement) {
+                    emailElement.style.transition = 'all 0.3s ease';
+                    emailElement.style.opacity = '0.5';
+                    emailElement.style.transform = 'translateX(50px)';
+                    
+                    setTimeout(() => {
+                        emailElement.remove();
+                        updateSelectedCount();
+                        
+                        // Check if any emails are left
+                        const remainingEmails = document.querySelectorAll('.email-item').length - 1; // -1 for controls div
+                        if (remainingEmails === 0) {
+                            document.getElementById('email-list').innerHTML = 
+                                '<div style="padding: 2rem; text-align: center; color: #666;">No emails remaining</div>';
+                        }
+                    }, 300);
+                }
             });
+            
+            // Show success message
+            const successMsg = document.createElement('div');
+            successMsg.style.cssText = 'background: #d4edda; color: #155724; padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 1px solid #c3e6cb;';
+            successMsg.innerHTML = `✅ ${data.message}`;
+            document.getElementById('email-responder-section').insertBefore(successMsg, document.getElementById('email-list-container'));
+            
+            // Remove success message after 5 seconds
+            setTimeout(() => {
+                if (successMsg.parentNode) {
+                    successMsg.remove();
+                }
+            }, 5000);
+            
+            // Update stats
+            loadStats();
+            
+        } else {
+            const errorData = await response.json();
+            alert(`Error: ${errorData.message || 'Failed to move emails to deleted items'}`);
         }
+        
+    } catch (error) {
+        console.error('Error moving emails to trash:', error);
+        alert('Failed to move emails to deleted items');
+    } finally {
+        // Restore button state
+        const moveBtn = document.getElementById('move-selected-btn');
+        updateSelectedCount(); // This will restore the proper button text and state
+    }
+}
 
         function selectEmail(emailId, element, emailData) {
             // Remove previous selection
