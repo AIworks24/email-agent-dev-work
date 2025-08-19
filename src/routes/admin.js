@@ -6,112 +6,126 @@ const router = express.Router();
 // Middleware to parse form data
 router.use(express.urlencoded({ extended: true }));
 
-// Create a direct database connection for admin routes
-function createAdminDatabaseConnection() {
-    console.log('🔧 Creating admin database connection...');
+// Create standalone admin database connection that doesn't depend on any other modules
+let adminSequelize = null;
+let AdminClientOrganization = null;
+
+function initializeAdminDatabase() {
+    if (adminSequelize) return adminSequelize; // Return existing connection
     
-    // Use the same individual components that work for your main app
-    if (process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME) {
-        console.log('🔗 Using individual DB components for admin...');
-        console.log(`📍 Host: ${process.env.DB_HOST}`);
-        console.log(`👤 User: ${process.env.DB_USER}`);
-        console.log(`🗄️ Database: ${process.env.DB_NAME}`);
-        
-        const adminSequelize = new Sequelize(
-            process.env.DB_NAME,
-            process.env.DB_USER,
-            process.env.DB_PASSWORD,
-            {
-                host: process.env.DB_HOST,
-                port: process.env.DB_PORT || 5432,
-                dialect: 'postgres',
-                dialectOptions: {
-                    ssl: process.env.NODE_ENV === 'production' ? {
-                        require: true,
-                        rejectUnauthorized: false
-                    } : false
-                },
-                logging: process.env.NODE_ENV === 'development' ? console.log : false,
-                pool: {
-                    max: 5,
-                    min: 0,
-                    acquire: 30000,
-                    idle: 10000
-                }
-            }
-        );
-        
-        // Define the ClientOrganization model specifically for admin
-        const AdminClientOrganization = adminSequelize.define('ClientOrganization', {
-            id: {
-                type: DataTypes.INTEGER,
-                primaryKey: true,
-                autoIncrement: true
-            },
-            tenantId: {
-                type: DataTypes.STRING,
-                unique: true,
-                allowNull: false
-            },
-            organizationName: {
-                type: DataTypes.STRING,
-                allowNull: false
-            },
-            domain: {
-                type: DataTypes.STRING,
-                allowNull: true
-            },
-            subscriptionTier: {
-                type: DataTypes.ENUM('free', 'basic', 'premium'),
-                defaultValue: 'free',
-                allowNull: false
-            },
-            isActive: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: true,
-                allowNull: false
-            },
-            settings: {
-                type: DataTypes.JSON,
-                defaultValue: {},
-                allowNull: false
-            },
-            lastActiveAt: {
-                type: DataTypes.DATE,
-                allowNull: true
-            },
-            userCount: {
-                type: DataTypes.INTEGER,
-                defaultValue: 0,
-                allowNull: false
-            }
-        }, {
-            tableName: 'client_organizations',
-            timestamps: true
-        });
-        
-        return { sequelize: adminSequelize, ClientOrganization: AdminClientOrganization };
-    } else {
-        throw new Error('Database configuration missing - need DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
+    console.log('🔧 Initializing standalone admin database...');
+    
+    // ONLY use individual components
+    if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
+        throw new Error('Missing database environment variables: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME are required');
     }
+    
+    console.log('🔗 Creating fresh admin database connection...');
+    console.log(`📍 Host: ${process.env.DB_HOST}:${process.env.DB_PORT || 5432}`);
+    console.log(`👤 User: ${process.env.DB_USER}`);
+    console.log(`🗄️ Database: ${process.env.DB_NAME}`);
+    
+    // Create completely fresh Sequelize instance
+    adminSequelize = new Sequelize(
+        process.env.DB_NAME,
+        process.env.DB_USER,
+        process.env.DB_PASSWORD,
+        {
+            host: process.env.DB_HOST,
+            port: parseInt(process.env.DB_PORT) || 5432,
+            dialect: 'postgres',
+            dialectOptions: {
+                ssl: process.env.NODE_ENV === 'production' ? {
+                    require: true,
+                    rejectUnauthorized: false
+                } : false
+            },
+            logging: (msg) => {
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('🗄️ SQL:', msg);
+                }
+            },
+            pool: {
+                max: 5,
+                min: 0,
+                acquire: 30000,
+                idle: 10000
+            }
+        }
+    );
+    
+    // Define ClientOrganization model for admin
+    AdminClientOrganization = adminSequelize.define('ClientOrganization', {
+        id: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            autoIncrement: true
+        },
+        tenantId: {
+            type: DataTypes.STRING,
+            unique: true,
+            allowNull: false
+        },
+        organizationName: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        domain: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        subscriptionTier: {
+            type: DataTypes.ENUM('free', 'basic', 'premium'),
+            defaultValue: 'free',
+            allowNull: false
+        },
+        isActive: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true,
+            allowNull: false
+        },
+        settings: {
+            type: DataTypes.JSON,
+            defaultValue: {},
+            allowNull: false
+        },
+        lastActiveAt: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        userCount: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+            allowNull: false
+        }
+    }, {
+        tableName: 'client_organizations',
+        timestamps: true
+    });
+    
+    return adminSequelize;
 }
 
-// Test and get admin database connection
-async function getAdminDatabase() {
+async function getAdminClientOrganization() {
     try {
-        const { sequelize, ClientOrganization } = createAdminDatabaseConnection();
+        // Initialize if not already done
+        const sequelize = initializeAdminDatabase();
         
-        // Test the connection
+        // Test connection
+        console.log('🔍 Testing admin database connection...');
         await sequelize.authenticate();
         console.log('✅ Admin database connection successful');
         
-        // Sync the model (create table if it doesn't exist)
-        await ClientOrganization.sync();
-        console.log('✅ Admin ClientOrganization model synced');
+        // Sync model
+        console.log('🔄 Syncing AdminClientOrganization...');
+        await AdminClientOrganization.sync();
+        console.log('✅ AdminClientOrganization synced');
         
-        return ClientOrganization;
+        return AdminClientOrganization;
     } catch (error) {
-        console.error('❌ Admin database connection failed:', error.message);
+        console.error('❌ Admin database error:', error);
+        console.error('❌ Error type:', error.constructor.name);
+        console.error('❌ Stack:', error.stack);
         throw error;
     }
 }
@@ -121,15 +135,15 @@ router.all('/', requireAdminAuth, async (req, res) => {
     try {
         console.log('🔧 Admin dashboard accessed by:', req.adminUser);
         
-        // Get fresh database connection for admin
-        const ClientOrganization = await getAdminDatabase();
+        // Get admin database model
+        const ClientOrganization = await getAdminClientOrganization();
         
-        // Load organizations from the database
-        console.log('📊 Loading organizations from database...');
+        // Load organizations
+        console.log('📊 Loading organizations...');
         const organizations = await ClientOrganization.findAll({
             order: [['createdAt', 'DESC']]
         });
-        console.log(`✅ Loaded ${organizations.length} organizations from database`);
+        console.log(`✅ Found ${organizations.length} organizations`);
         
         // Calculate statistics
         const now = new Date();
@@ -154,11 +168,13 @@ router.all('/', requireAdminAuth, async (req, res) => {
             activeSessions: getActiveSessionsCount()
         };
         
+        console.log('📈 Statistics calculated:', stats);
+        
         res.send(generateAdminHTML(organizations, stats, req.adminUser));
         
     } catch (error) {
-        console.error('🚨 Admin dashboard error:', error);
-        console.error('Stack trace:', error.stack);
+        console.error('🚨 Admin dashboard critical error:', error);
+        console.error('🚨 Error stack:', error.stack);
         
         res.status(500).send(`
             <!DOCTYPE html>
@@ -169,35 +185,38 @@ router.all('/', requireAdminAuth, async (req, res) => {
                     body { font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; }
                     .error-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
                     .error-title { color: #dc3545; margin-bottom: 20px; }
-                    .error-details { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0; font-family: monospace; }
+                    .error-details { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 15px 0; font-family: monospace; font-size: 12px; white-space: pre-wrap; }
                     .action-links { margin-top: 20px; }
                     .action-links a { display: inline-block; margin-right: 15px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
-                    .env-check { background: #fff3cd; padding: 15px; border-radius: 4px; margin: 15px 0; }
+                    .env-debug { background: #fff3cd; padding: 15px; border-radius: 4px; margin: 15px 0; }
                 </style>
             </head>
             <body>
                 <div class="error-container">
-                    <h2 class="error-title">🚨 Admin Dashboard Error</h2>
-                    <p>Unable to connect to the database. Please check your database configuration.</p>
+                    <h2 class="error-title">🚨 Admin Dashboard Database Error</h2>
+                    <p>Unable to connect to the database using individual components.</p>
                     
                     <div class="error-details">
-                        <strong>Error:</strong> ${error.message}<br>
-                        <strong>Time:</strong> ${new Date().toISOString()}<br>
-                        <strong>Admin User:</strong> ${req.adminUser || 'Unknown'}
+Error: ${error.message}
+Type: ${error.constructor.name}
+Time: ${new Date().toISOString()}
+Admin: ${req.adminUser || 'Unknown'}
+
+${error.stack}
                     </div>
                     
-                    <div class="env-check">
-                        <strong>Environment Variables Check:</strong><br>
-                        DB_HOST: ${process.env.DB_HOST ? '✅ Set' : '❌ Missing'}<br>
-                        DB_USER: ${process.env.DB_USER ? '✅ Set' : '❌ Missing'}<br>
-                        DB_PASSWORD: ${process.env.DB_PASSWORD ? '✅ Set' : '❌ Missing'}<br>
-                        DB_NAME: ${process.env.DB_NAME ? '✅ Set' : '❌ Missing'}<br>
-                        DB_PORT: ${process.env.DB_PORT || '5432 (default)'}
+                    <div class="env-debug">
+                        <strong>Database Configuration Check:</strong><br>
+                        DB_HOST: ${process.env.DB_HOST || '❌ MISSING'}<br>
+                        DB_USER: ${process.env.DB_USER || '❌ MISSING'}<br>
+                        DB_PASSWORD: ${process.env.DB_PASSWORD ? '✅ Set (length: ' + process.env.DB_PASSWORD.length + ')' : '❌ MISSING'}<br>
+                        DB_NAME: ${process.env.DB_NAME || '❌ MISSING'}<br>
+                        DB_PORT: ${process.env.DB_PORT || '5432 (default)'}<br>
+                        NODE_ENV: ${process.env.NODE_ENV || 'development'}
                     </div>
                     
                     <div class="action-links">
-                        <a href="/health">📊 Check System Health</a>
-                        <a href="/admin/status">🖥️ System Status</a>
+                        <a href="/health">📊 System Health</a>
                         <a href="/admin/logout">🚪 Logout</a>
                     </div>
                 </div>
@@ -210,7 +229,7 @@ router.all('/', requireAdminAuth, async (req, res) => {
 // Usage statistics
 router.get('/usage', requireAdminAuth, async (req, res) => {
     try {
-        const ClientOrganization = await getAdminDatabase();
+        const ClientOrganization = await getAdminClientOrganization();
         const organizations = await ClientOrganization.findAll();
         
         const usageStats = {
@@ -250,7 +269,7 @@ router.get('/usage', requireAdminAuth, async (req, res) => {
 // Export data
 router.get('/export', requireAdminAuth, async (req, res) => {
     try {
-        const ClientOrganization = await getAdminDatabase();
+        const ClientOrganization = await getAdminClientOrganization();
         const organizations = await ClientOrganization.findAll();
         
         const csvHeaders = [
@@ -284,13 +303,12 @@ router.get('/export', requireAdminAuth, async (req, res) => {
 // System status
 router.get('/status', requireAdminAuth, async (req, res) => {
     try {
-        // Test database connectivity
         let dbStatus = 'unknown';
         let dbError = null;
         let orgCount = 0;
         
         try {
-            const ClientOrganization = await getAdminDatabase();
+            const ClientOrganization = await getAdminClientOrganization();
             orgCount = await ClientOrganization.count();
             dbStatus = 'connected';
         } catch (error) {
@@ -308,7 +326,13 @@ router.get('/status', requireAdminAuth, async (req, res) => {
             database: {
                 status: dbStatus,
                 error: dbError,
-                organizationCount: orgCount
+                organizationCount: orgCount,
+                connection: {
+                    host: process.env.DB_HOST,
+                    port: process.env.DB_PORT || 5432,
+                    database: process.env.DB_NAME,
+                    user: process.env.DB_USER
+                }
             },
             environmentVariables: {
                 hasAdminUsername: !!process.env.ADMIN_USERNAME,
@@ -318,7 +342,6 @@ router.get('/status', requireAdminAuth, async (req, res) => {
                 hasDbPassword: !!process.env.DB_PASSWORD,
                 hasDbName: !!process.env.DB_NAME,
                 hasDbPort: !!process.env.DB_PORT,
-                hasDatabaseUrl: !!process.env.DATABASE_URL,
                 hasAzureClientId: !!process.env.AZURE_CLIENT_ID
             }
         };
@@ -342,7 +365,7 @@ router.get('/status', requireAdminAuth, async (req, res) => {
 // Organization details
 router.get('/org/:id', requireAdminAuth, async (req, res) => {
     try {
-        const ClientOrganization = await getAdminDatabase();
+        const ClientOrganization = await getAdminClientOrganization();
         const organization = await ClientOrganization.findByPk(req.params.id);
         
         if (!organization) {
@@ -391,7 +414,7 @@ function generateAdminHTML(organizations, stats, adminUser) {
                 color: #333;
             }
             .header {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
                 color: white;
                 padding: 20px 30px;
                 display: flex;
@@ -557,7 +580,7 @@ function generateAdminHTML(organizations, stats, adminUser) {
         
         <div class="container">
             <div class="success-banner">
-                ✅ <strong>Database Connected:</strong> Admin dashboard is now connected to your production database and ready for live client data.
+                ✅ <strong>Production Database Connected:</strong> Admin dashboard is successfully connected to your production database and ready for live client data.
             </div>
             
             <div class="stats-grid">
@@ -586,8 +609,9 @@ function generateAdminHTML(organizations, stats, adminUser) {
                     </div>
                     ${organizations.length === 0 ? `
                         <div class="empty-state">
-                            <h3>Ready for Client Organizations</h3>
-                            <p>Client organizations will appear here when they start using the AI Email Agent. The database is connected and ready to receive live data.</p>
+                            <h3>✅ Ready for Production</h3>
+                            <p>Your AI Email Agent is ready for live client organizations. When clients authenticate with Microsoft 365, their organizations will appear here automatically.</p>
+                            <p><strong>Database Status:</strong> Connected and operational</p>
                         </div>
                     ` : `
                         <div class="table-container">
@@ -661,7 +685,7 @@ function generateAdminHTML(organizations, stats, adminUser) {
             </div>
             
             <div class="refresh-note">
-                Production database connected. Last refresh: ${new Date().toLocaleString()}
+                Production database connected successfully. Last refresh: ${new Date().toLocaleString()}
             </div>
         </div>
     </body>
