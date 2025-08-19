@@ -4,8 +4,18 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 
+const { initializeDatabase } = require('./src/config/initDatabase');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+initializeDatabase().then(success => {
+    if (success) {
+        console.log('🚀 Database ready for multi-tenant operations');
+    } else {
+        console.error('⚠️ Database initialization failed - some features may not work');
+    }
+});
 
 // Middleware
 app.use(express.json());
@@ -108,7 +118,7 @@ app.get('/auth/callback', async (req, res) => {
             auth: {
                 clientId: process.env.AZURE_CLIENT_ID,
                 clientSecret: process.env.AZURE_CLIENT_SECRET,
-                authority: 'https://login.microsoftonline.com/common' // Multi-tenant
+                authority: 'https://login.microsoftonline.com/common'
             }
         };
 
@@ -134,44 +144,76 @@ app.get('/auth/callback', async (req, res) => {
         const userDomain = response.account.username.split('@')[1];
         
         // Store/update organization in database
-        const ClientOrganization = require('./src/models/ClientOrganization');
-        
-        const [organization, created] = await ClientOrganization.findOrCreate({
-            where: { tenantId: tenantId },
-            defaults: {
-                organizationName: organizationName,
-                domain: userDomain,
-                subscriptionTier: 'free'
+        try {
+            const ClientOrganization = require('./src/models/ClientOrganization');
+            
+            const [organization, created] = await ClientOrganization.findOrCreate({
+                where: { tenantId: tenantId },
+                defaults: {
+                    organizationName: organizationName,
+                    domain: userDomain,
+                    subscriptionTier: 'free',
+                    isActive: true
+                }
+            });
+            
+            if (created) {
+                console.log(`🎉 New organization registered: ${organizationName} (${tenantId})`);
+            } else {
+                // Update last activity
+                await organization.update({ updatedAt: new Date() });
+                console.log(`✅ Existing organization login: ${organizationName}`);
             }
-        });
-        
-        if (created) {
-            console.log(`✅ New organization registered: ${organizationName} (${tenantId})`);
+            
+            const userData = {
+                id: response.account.homeAccountId,
+                username: response.account.username,
+                name: response.account.name,
+                tenantId: tenantId,
+                organizationName: organizationName,
+                organizationId: organization.id
+            };
+            
+            res.cookie('accessToken', response.accessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 24 * 60 * 60 * 1000
+            });
+            
+            res.cookie('userData', JSON.stringify(userData), {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 24 * 60 * 60 * 1000
+            });
+            
+            console.log(`✅ User authenticated: ${response.account.username} from ${organizationName}`);
+            res.redirect('/dashboard');
+            
+        } catch (dbError) {
+            console.error('Database error during auth:', dbError);
+            // Still allow login even if database fails
+            const userData = {
+                id: response.account.homeAccountId,
+                username: response.account.username,
+                name: response.account.name,
+                tenantId: tenantId,
+                organizationName: organizationName
+            };
+            
+            res.cookie('accessToken', response.accessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 24 * 60 * 60 * 1000
+            });
+            
+            res.cookie('userData', JSON.stringify(userData), {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 24 * 60 * 60 * 1000
+            });
+            
+            res.redirect('/dashboard');
         }
-        
-        const userData = {
-            id: response.account.homeAccountId,
-            username: response.account.username,
-            name: response.account.name,
-            tenantId: tenantId,
-            organizationName: organizationName,
-            organizationId: organization.id
-        };
-        
-        res.cookie('accessToken', response.accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000
-        });
-        
-        res.cookie('userData', JSON.stringify(userData), {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000
-        });
-        
-        console.log(`✅ User authenticated: ${response.account.username} from ${organizationName}`);
-        res.redirect('/dashboard');
         
     } catch (error) {
         console.error('Token exchange error:', error);
