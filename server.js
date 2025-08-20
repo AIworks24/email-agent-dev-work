@@ -1029,18 +1029,16 @@ app.post('/api/calendar/analyze', async (req, res) => {
             timeZoneName: 'short'
         });
         
-        // FIXED: Use timezone-aware date range
+        // Use timezone-aware date range
         const startDate = new Date();
-        startDate.setHours(0, 0, 0, 0); // Start of today
+        startDate.setHours(0, 0, 0, 0);
         const endDate = new Date();
-        endDate.setDate(endDate.getDate() + 14); // 2 weeks ahead
+        endDate.setDate(endDate.getDate() + 14);
         endDate.setHours(23, 59, 59, 999);
         
         console.log('🕐 Calendar query debug:', {
             userTimezone,
             timezoneLabel,
-            startLocal: startDate.toLocaleString('en-US', { timeZone: userTimezone }),
-            endLocal: endDate.toLocaleString('en-US', { timeZone: userTimezone }),
             startUTC: startDate.toISOString(),
             endUTC: endDate.toISOString()
         });
@@ -1050,7 +1048,7 @@ app.post('/api/calendar/analyze', async (req, res) => {
             graphClient.api('/me/messages').top(20).select('id,subject,from,receivedDateTime,bodyPreview,body').get(),
             graphClient.api('/me/events')
                 .filter(`start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`)
-                .header('Prefer', `outlook.timezone="${userTimezone}"`) // THIS IS CRITICAL
+                .header('Prefer', `outlook.timezone="${userTimezone}"`) // Microsoft Graph returns times in this timezone
                 .select('id,subject,start,end,location,attendees,importance,showAs,organizer')
                 .orderby('start/dateTime')
                 .top(20).get(),
@@ -1070,33 +1068,40 @@ app.post('/api/calendar/analyze', async (req, res) => {
             return `${email.subject} from ${email.from?.emailAddress?.name} (${emailTime} ${timezoneLabel}) - ${email.bodyPreview?.substring(0, 100)}`;
         }).join('\n');
 
-        // FORMAT EVENTS WITH PROPER TIMEZONE CONVERSION
+        // FIXED: Use Microsoft Graph times directly without double conversion
         const eventSummary = events.value.map(event => {
-            // Microsoft Graph returns the datetime in the timezone specified by the header
-            // But we need to ensure proper formatting
-            const eventDateTime = new Date(event.start.dateTime);
+            // Microsoft Graph already returns times in the requested timezone
+            // We just need to parse and format them without timezone conversion
+            const rawDateTime = event.start.dateTime; // e.g., "2025-08-22T14:00:00.0000000"
             
-            console.log('📅 Event debug:', {
+            // Parse the time and format it directly (no timezone conversion needed)
+            const eventDateTime = new Date(rawDateTime);
+            
+            // Format without timezone conversion since Graph already returned it in correct timezone
+            const dayOfWeek = eventDateTime.toLocaleDateString('en-US', { weekday: 'short' });
+            const month = eventDateTime.toLocaleDateString('en-US', { month: 'short' });
+            const day = eventDateTime.getDate();
+            const hour = eventDateTime.getHours();
+            const minute = eventDateTime.getMinutes();
+            
+            // Format time in 12-hour format
+            const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayMinute = minute.toString().padStart(2, '0');
+            
+            const formattedTime = `${dayOfWeek}, ${month} ${day}, ${displayHour}:${displayMinute} ${ampm}`;
+            
+            console.log('📅 Event formatting:', {
                 eventTitle: event.subject,
-                rawDateTime: event.start.dateTime,
-                parsedDateTime: eventDateTime.toISOString(),
-                formattedInUserTZ: eventDateTime.toLocaleString('en-US', { timeZone: userTimezone })
+                rawDateTime: rawDateTime,
+                parsedHour: hour,
+                formattedTime: formattedTime
             });
             
-            const eventTime = eventDateTime.toLocaleString('en-US', {
-                timeZone: userTimezone,
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-            
-            return `${event.subject} - ${eventTime} ${timezoneLabel}`;
+            return `${event.subject} - ${formattedTime} ${timezoneLabel}`;
         }).join('\n');
 
-        // Build prompt for Claude with debug info
+        // Build prompt for Claude
         const prompt = `You are an AI calendar assistant. Current time: ${currentTime}
 
 User Request: ${query}
@@ -1116,7 +1121,7 @@ ${eventSummary}
 
 Current User: ${userProfile.displayName} (${userProfile.mail})
 
-CRITICAL: All event times above are already converted to ${timezoneLabel}. When displaying times, use exactly what's provided above.
+CRITICAL: All event times above are in ${timezoneLabel}. Display them exactly as provided.
 
 INSTRUCTIONS:
 1. All times should be referenced in Eastern Time (${timezoneLabel})
@@ -1179,15 +1184,7 @@ If no meeting detected:
             eventCount: events.value.length,
             currentTime: currentTime,
             timezone: userTimezone,
-            timezoneLabel: timezoneLabel,
-            debug: {
-                eventsFound: events.value.length,
-                sampleEvent: events.value[0] ? {
-                    title: events.value[0].subject,
-                    rawTime: events.value[0].start.dateTime,
-                    formattedTime: new Date(events.value[0].start.dateTime).toLocaleString('en-US', { timeZone: userTimezone })
-                } : null
-            }
+            timezoneLabel: timezoneLabel
         });
         
     } catch (error) {
