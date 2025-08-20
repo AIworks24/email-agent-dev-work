@@ -1529,25 +1529,107 @@
             analyzeEmails();
         }
 
-        // Email Responder functions
-        async function loadEmailsForResponse() {
-            try {
-                const response = await fetch('/api/emails?days=3');
-                if (response.ok) {
-                    const data = await response.json();
-                    displayEmailList(data.emails);
-                    document.getElementById('email-list-container').style.display = 'block';
-                } else {
-                    alert('Failed to load emails');
-                }
-            } catch (error) {
-                console.error('Error loading emails:', error);
-                alert('Failed to load emails');
-            }
+        // REPLACE your existing loadEmailsForResponse function in dashboard.html with this enhanced version:
+
+async function loadEmailsForResponse() {
+    try {
+        // Show loading state
+        const loadButton = document.querySelector('button[onclick="loadEmailsForResponse()"]');
+        const originalText = loadButton.textContent;
+        loadButton.textContent = '📄 Loading Emails...';
+        loadButton.disabled = true;
+        
+        // Load emails from past 7 days instead of 3, with more comprehensive data
+        const response = await fetch('/api/emails?days=7');
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            console.log('📧 Loaded emails for response:', {
+                totalEmails: data.count,
+                daysLoaded: data.totalDays,
+                dateRange: data.dateRange
+            });
+            
+            displayEmailList(data.emails);
+            document.getElementById('email-list-container').style.display = 'block';
+            
+            // Show summary of loaded emails
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.cssText = 'background: #e8f4f8; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #17a2b8;';
+            summaryDiv.innerHTML = `
+                <strong>📊 Loaded ${data.count} emails</strong> from the past ${data.totalDays} days<br>
+                <small style="color: #666;">
+                    From ${new Date(data.dateRange.since).toLocaleDateString()} to ${new Date(data.dateRange.until).toLocaleDateString()}
+                </small>
+            `;
+            
+            const emailListContainer = document.getElementById('email-list-container');
+            emailListContainer.insertBefore(summaryDiv, emailListContainer.firstChild);
+            
+            // Restore button
+            loadButton.textContent = originalText;
+            loadButton.disabled = false;
+            
+        } else {
+            alert('Failed to load emails');
+            loadButton.textContent = originalText;
+            loadButton.disabled = false;
         }
+    } catch (error) {
+        console.error('Error loading emails:', error);
+        alert('Failed to load emails');
+        
+        // Restore button state
+        const loadButton = document.querySelector('button[onclick="loadEmailsForResponse()"]');
+        loadButton.textContent = '📄 Load Recent Emails';
+        loadButton.disabled = false;
+    }
+}
 
-        // ADD THESE FUNCTIONS TO YOUR EXISTING dashboard.html JavaScript section
+async function analyzeEmails() {
+    const query = document.getElementById('analyzer-query').value.trim();
+    if (!query) {
+        alert('Please enter a question about your emails');
+        return;
+    }
 
+    showLoading('analyzer-response');
+    
+    try {
+        const response = await fetch('/api/emails/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                query, 
+                includeDays: 14 // Analyze 14 days of emails for more comprehensive insights
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Add analysis scope info to the response
+            let responseHtml = formatResponse(data.response);
+            responseHtml += `
+                <div style="margin-top: 1.5rem; padding: 0.75rem; background: #f8f9fa; border-left: 3px solid #28a745; border-radius: 4px;">
+                    <small style="color: #666;">
+                        <strong>Analysis Scope:</strong> ${data.analysisScope}<br>
+                        <strong>Query:</strong> "${data.query}"
+                    </small>
+                </div>
+            `;
+            
+            document.getElementById('analyzer-response').innerHTML = responseHtml;
+        } else {
+            const errorData = await response.json();
+            showError('analyzer-response', errorData.message || 'Failed to analyze emails');
+        }
+    } catch (error) {
+        console.error('Error analyzing emails:', error);
+        showError('analyzer-response', 'Failed to connect to AI service');
+    }
+}
 // UPDATE your existing displayEmailList function to include checkboxes:
 function displayEmailList(emails) {
     const emailList = document.getElementById('email-list');
@@ -2079,20 +2161,111 @@ async function moveSelectedToTrash() {
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + Enter to submit forms
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                const activeSection = document.querySelector('.content-section.active');
-                const activeInput = document.activeElement;
-                
-                if (activeInput.id === 'analyzer-query') {
-                    analyzeEmails();
-                } else if (activeInput.id === 'calendar-query') {
-                    analyzeCalendar();
-                } else if (activeInput.id === 'ai-query') {
-                    askAI();
-                }
+    // Enter key to submit forms (not just Ctrl/Cmd + Enter)
+    if (e.key === 'Enter' && !e.shiftKey) {
+        const activeElement = document.activeElement;
+        
+        // Calendar Manager - Enter key support
+        if (activeElement.id === 'calendar-query') {
+            e.preventDefault();
+            analyzeCalendar();
+            return;
+        }
+        
+        // Email Analyzer - Enter key support  
+        if (activeElement.id === 'analyzer-query') {
+            e.preventDefault();
+            analyzeEmails();
+            return;
+        }
+        
+        // Overview Quick Query - Enter key support
+        if (activeElement.id === 'ai-query') {
+            e.preventDefault();
+            askAI();
+            return;
+        }
+        
+        // Email Response Context - Shift+Enter for new line, Enter to generate
+        if (activeElement.id === 'response-context') {
+            if (!e.shiftKey) {
+                e.preventDefault();
+                generateResponse();
+                return;
             }
-        });
+        }
+    }
+    
+    // Ctrl/Cmd + Enter as alternative for all inputs
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const activeElement = document.activeElement;
+        
+        if (activeElement.id === 'analyzer-query') {
+            analyzeEmails();
+        } else if (activeElement.id === 'calendar-query') {
+            analyzeCalendar();
+        } else if (activeElement.id === 'ai-query') {
+            askAI();
+        } else if (activeElement.id === 'response-context') {
+            generateResponse();
+        }
+    }
+    
+    // ESC key to cancel operations
+    if (e.key === 'Escape') {
+        // Cancel email response if open
+        if (document.getElementById('response-form').style.display !== 'none') {
+            cancelResponse();
+        }
+    }
+});
+
+// Add visual feedback when inputs are focused
+document.addEventListener('DOMContentLoaded', function() {
+    // Add placeholder hints about Enter key
+    const calendarInput = document.getElementById('calendar-query');
+    const analyzerInput = document.getElementById('analyzer-query');
+    const overviewInput = document.getElementById('ai-query');
+    
+    if (calendarInput) {
+        calendarInput.placeholder = 'Ask about your calendar... (Press Enter to analyze)';
+        addInputFeedback(calendarInput);
+    }
+    
+    if (analyzerInput) {
+        analyzerInput.placeholder = 'Ask about your emails... (Press Enter to analyze)';
+        addInputFeedback(analyzerInput);
+    }
+    
+    if (overviewInput) {
+        overviewInput.placeholder = 'Ask me anything about your emails or calendar... (Press Enter to ask)';
+        addInputFeedback(overviewInput);
+    }
+});
+
+// Helper function to add visual feedback to inputs
+function addInputFeedback(input) {
+    if (!input) return;
+    
+    input.addEventListener('focus', function() {
+        this.style.borderColor = '#667eea';
+        this.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+    });
+    
+    input.addEventListener('blur', function() {
+        this.style.borderColor = '#e1e5e9';
+        this.style.boxShadow = 'none';
+    });
+    
+    // Add subtle animation when typing
+    input.addEventListener('input', function() {
+        if (this.value.length > 0) {
+            this.style.backgroundColor = '#f8f9ff';
+        } else {
+            this.style.backgroundColor = '#ffffff';
+        }
+    });
+}
 
         // Auto-refresh stats every 5 minutes
         setInterval(loadStats, 5 * 60 * 1000);
