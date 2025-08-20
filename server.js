@@ -453,47 +453,97 @@ app.get('/api/calendar/events', async (req, res) => {
     
     try {
         const graphClient = createGraphClient(accessToken);
-        
         const { days = 7 } = req.query;
+        const userTimezone = 'America/New_York';
         
-        // Get current time in user's timezone (you can make this configurable)
-        const userTimezone = 'America/New_York'; // EST/EDT
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(endDate.getDate() + parseInt(days));
+        // Use proper timezone-aware date range creation
+        const dateRange = createUserTimezoneDateRange(userTimezone, parseInt(days));
+        
+        console.log('📅 Calendar events range calculation:', {
+            userTimezone,
+            days: parseInt(days),
+            startISO: dateRange.start.toISOString(),
+            endISO: dateRange.end.toISOString(),
+            timezoneLabel: dateRange.timezoneLabel,
+            startLocal: dateRange.start.toLocaleString('en-US', { timeZone: userTimezone }),
+            endLocal: dateRange.end.toLocaleString('en-US', { timeZone: userTimezone })
+        });
 
+        // Fetch events with timezone preference
         const events = await graphClient
             .api('/me/events')
-            .filter(`start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`)
+            .filter(`start/dateTime ge '${dateRange.start.toISOString()}' and end/dateTime le '${dateRange.end.toISOString()}'`)
             .select('id,subject,start,end,location,attendees,importance,showAs,organizer')
-            .header('Prefer', `outlook.timezone="${userTimezone}"`) // This tells Graph API to return times in EST/EDT
+            .header('Prefer', `outlook.timezone="${userTimezone}"`)
             .orderby('start/dateTime')
             .top(50)
             .get();
         
-        res.json({
-            success: true,
-            count: events.value.length,
-            events: events.value.map(event => ({
+        // Process events with corrected timezone handling
+        const processedEvents = events.value.map(event => {
+            // Parse the datetime from Microsoft Graph
+            const startDateTime = new Date(event.start.dateTime);
+            const endDateTime = new Date(event.end.dateTime);
+            
+            // Format times in user's timezone
+            const startTimeFormatted = startDateTime.toLocaleString('en-US', {
+                timeZone: userTimezone,
+                weekday: 'short',
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            
+            const endTimeFormatted = endDateTime.toLocaleString('en-US', {
+                timeZone: userTimezone,
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            
+            return {
                 ...event,
-                // Ensure we have proper timezone info
                 start: {
                     ...event.start,
-                    timeZone: userTimezone
+                    timeZone: userTimezone,
+                    displayTime: startTimeFormatted,
+                    timezoneLabel: dateRange.timezoneLabel
                 },
                 end: {
                     ...event.end,
-                    timeZone: userTimezone
-                }
-            })),
-            timezone: userTimezone
+                    timeZone: userTimezone,
+                    displayTime: endTimeFormatted,
+                    timezoneLabel: dateRange.timezoneLabel
+                },
+                displayTimeRange: `${startTimeFormatted} - ${endTimeFormatted} ${dateRange.timezoneLabel}`
+            };
         });
+        
+        res.json({
+            success: true,
+            count: processedEvents.length,
+            events: processedEvents,
+            timezone: userTimezone,
+            timezoneLabel: dateRange.timezoneLabel,
+            isDST: isInDST(),
+            debug: {
+                queryStartUTC: dateRange.start.toISOString(),
+                queryEndUTC: dateRange.end.toISOString(),
+                requestedDays: parseInt(days),
+                userTimezone: userTimezone
+            }
+        });
+        
     } catch (error) {
         console.error('Error fetching calendar:', error);
-        res.status(500).json({ error: 'Failed to fetch calendar events', message: error.message });
+        res.status(500).json({
+            error: 'Failed to fetch calendar events', 
+            message: error.message 
+        });
     }
 });
-
 app.get('/api/calendar/today', async (req, res) => {
     const accessToken = req.cookies.accessToken;
     if (!accessToken) {
@@ -502,17 +552,23 @@ app.get('/api/calendar/today', async (req, res) => {
     
     try {
         const graphClient = createGraphClient(accessToken);
-        
         const userTimezone = 'America/New_York';
         
-        // Create today's date range in user's timezone
-        const today = new Date();
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-        const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        // Use proper timezone-aware date range creation
+        const todayRange = createUserTimezoneDay(userTimezone, 0);
+        
+        console.log('🕐 Today range calculation:', {
+            userTimezone,
+            startISO: todayRange.start.toISOString(),
+            endISO: todayRange.end.toISOString(),
+            timezoneLabel: todayRange.timezoneLabel,
+            startLocal: todayRange.start.toLocaleString('en-US', { timeZone: userTimezone }),
+            endLocal: todayRange.end.toLocaleString('en-US', { timeZone: userTimezone })
+        });
 
         const events = await graphClient
             .api('/me/events')
-            .filter(`start/dateTime ge '${todayStart.toISOString()}' and start/dateTime lt '${todayEnd.toISOString()}'`)
+            .filter(`start/dateTime ge '${todayRange.start.toISOString()}' and start/dateTime lt '${todayRange.end.toISOString()}'`)
             .select('id,subject,start,end,location,attendees,importance,showAs,organizer')
             .header('Prefer', `outlook.timezone="${userTimezone}"`)
             .orderby('start/dateTime')
@@ -523,41 +579,68 @@ app.get('/api/calendar/today', async (req, res) => {
             const startTime = new Date(event.start.dateTime);
             const endTime = new Date(event.end.dateTime);
             
+            // Format times specifically in user's timezone
+            const startTimeFormatted = startTime.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: userTimezone
+            });
+            
+            const endTimeFormatted = endTime.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: userTimezone
+            });
+            
             return {
                 ...event,
-                displayTime: `${startTime.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                    timeZone: userTimezone
-                })} - ${endTime.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                    timeZone: userTimezone
-                })}`,
+                displayTime: `${startTimeFormatted} - ${endTimeFormatted} ${todayRange.timezoneLabel}`,
                 start: {
                     ...event.start,
-                    timeZone: userTimezone
+                    timeZone: userTimezone,
+                    localTime: startTimeFormatted,
+                    timezoneLabel: todayRange.timezoneLabel
                 },
                 end: {
                     ...event.end,
-                    timeZone: userTimezone
+                    timeZone: userTimezone,
+                    localTime: endTimeFormatted,
+                    timezoneLabel: todayRange.timezoneLabel
                 }
             };
         });
         
+        // Get current date in user's timezone for display
+        const todayInUserTZ = new Date().toLocaleDateString('en-US', { 
+            timeZone: userTimezone,
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
         res.json({
             success: true,
-            date: today.toLocaleDateString('en-US', { timeZone: userTimezone }),
+            date: todayInUserTZ,
             eventCount: formattedEvents.length,
             events: formattedEvents,
             summary: `You have ${formattedEvents.length} meetings today.`,
-            timezone: userTimezone
+            timezone: userTimezone,
+            timezoneLabel: todayRange.timezoneLabel,
+            debug: {
+                queryStartUTC: todayRange.start.toISOString(),
+                queryEndUTC: todayRange.end.toISOString(),
+                userTimezone: userTimezone
+            }
         });
     } catch (error) {
         console.error('Error fetching today schedule:', error);
-        res.status(500).json({ error: 'Failed to fetch today\'s schedule', message: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch today\'s schedule', 
+            message: error.message 
+        });
     }
 });
 
@@ -959,8 +1042,9 @@ app.post('/api/calendar/analyze', async (req, res) => {
         const axios = require('axios');
         const userTimezone = 'America/New_York';
         
-        // Get current time context
-        const currentTime = new Date().toLocaleString('en-US', {
+        // Get current time context with proper timezone handling
+        const now = new Date();
+        const currentTime = now.toLocaleString('en-US', {
             timeZone: userTimezone,
             weekday: 'long',
             year: 'numeric',
@@ -972,16 +1056,33 @@ app.post('/api/calendar/analyze', async (req, res) => {
             timeZoneName: 'short'
         });
         
+        // Get proper timezone label
+        const timezoneLabel = getTimezoneLabel(now);
+        
+        // Use timezone-aware date range for events query
+        const dateRange = createUserTimezoneDateRange(userTimezone, 14); // Get 2 weeks of events for context
+        
+        console.log('🤖 Calendar analysis date range:', {
+            userTimezone,
+            timezoneLabel,
+            startISO: dateRange.start.toISOString(),
+            endISO: dateRange.end.toISOString(),
+            currentTime
+        });
+        
         // Get recent emails and calendar events for context
         const [emails, events, userProfile] = await Promise.all([
             graphClient.api('/me/messages').top(20).select('id,subject,from,receivedDateTime,bodyPreview,body').get(),
             graphClient.api('/me/events')
-                .filter(`start/dateTime ge '${new Date().toISOString()}'`)
+                .filter(`start/dateTime ge '${dateRange.start.toISOString()}' and end/dateTime le '${dateRange.end.toISOString()}'`)
                 .header('Prefer', `outlook.timezone="${userTimezone}"`)
+                .select('id,subject,start,end,location,attendees,importance,showAs,organizer')
+                .orderby('start/dateTime')
                 .top(20).get(),
             graphClient.api('/me').select('mail,displayName').get()
         ]);
 
+        // Format email summary with correct timezone
         const emailSummary = emails.value.map(email => {
             const emailTime = new Date(email.receivedDateTime).toLocaleString('en-US', {
                 timeZone: userTimezone,
@@ -991,11 +1092,16 @@ app.post('/api/calendar/analyze', async (req, res) => {
                 minute: '2-digit',
                 hour12: true
             });
-            return `${email.subject} from ${email.from?.emailAddress?.name} (${emailTime} EST) - ${email.bodyPreview?.substring(0, 100)}`;
+            return `${email.subject} from ${email.from?.emailAddress?.name} (${emailTime} ${timezoneLabel}) - ${email.bodyPreview?.substring(0, 100)}`;
         }).join('\n');
 
+        // Format calendar events with CORRECTED timezone handling
         const eventSummary = events.value.map(event => {
-            const eventTime = new Date(event.start.dateTime).toLocaleString('en-US', {
+            // Parse the datetime string properly accounting for timezone
+            const eventDateTime = new Date(event.start.dateTime);
+            
+            // Format the time in the user's timezone
+            const eventTime = eventDateTime.toLocaleString('en-US', {
                 timeZone: userTimezone,
                 weekday: 'short',
                 month: 'short',
@@ -1004,11 +1110,14 @@ app.post('/api/calendar/analyze', async (req, res) => {
                 minute: '2-digit',
                 hour12: true
             });
-            return `${event.subject} - ${eventTime} EST`;
+            
+            return `${event.subject} - ${eventTime} ${timezoneLabel}`;
         }).join('\n');
 
-        // Enhanced prompt with better timezone awareness
-        const prompt = `You are an AI calendar assistant with advanced meeting detection capabilities. Current time: ${currentTime}
+        // Enhanced prompt with better timezone awareness and clean output instructions
+        const prompt = `You are an AI calendar assistant with advanced meeting detection capabilities. 
+
+Current time: ${currentTime}
 
 User Request: ${query}
 
@@ -1019,48 +1128,42 @@ Subject: ${emailContext.subject}
 Content: ${emailContext.content}
 ` : ''}
 
-Recent Emails (with EST times):
+Recent Emails (with ${timezoneLabel} times):
 ${emailSummary}
 
-Upcoming Calendar Events (in EST):
+Upcoming Calendar Events (in ${timezoneLabel}):
 ${eventSummary}
 
 Current User: ${userProfile.displayName} (${userProfile.mail})
 
-IMPORTANT: All times should be referenced in Eastern Time (EST/EDT). When suggesting meeting times, always specify EST.
+CRITICAL INSTRUCTIONS:
+1. All times should be referenced in Eastern Time (${timezoneLabel})
+2. When suggesting meeting times, always specify ${timezoneLabel}
+3. Provide ONLY clean, formatted text in your response
+4. DO NOT include any JSON code blocks or raw JSON in your main response
+5. Use proper markdown formatting for headers and structure
 
 Based on this information, provide:
 
-1. **Analysis**: Analyze the request and determine if it involves scheduling a meeting or appointment
-2. **Meeting Detection**: If a meeting is suggested/requested, identify:
-   - Meeting purpose and type
-   - Suggested attendees (include original email sender if from email context)
-   - Recommended duration
-   - Best time slots this week or next week (in EST)
-   - Whether it should be virtual (Teams/Zoom) or in-person
-3. **Specific Recommendations**: Provide actionable scheduling suggestions with EST times
-4. **JSON Meeting Suggestion**: If appropriate, provide a JSON object with meeting details
+**Analysis**
+Analyze the request and determine if it involves scheduling a meeting or appointment.
 
-If you detect a meeting should be scheduled, end your response with a JSON object in this exact format:
-{
-  "meetingDetected": true,
-  "meetingDetails": {
-    "title": "Suggested meeting title",
-    "duration": 60,
-    "attendees": ["email1@domain.com", "email2@domain.com"],
-    "description": "Meeting purpose and agenda",
-    "meetingType": "teams|zoom|in-person",
-    "suggestedTimes": [
-      {"date": "2025-01-15", "time": "14:00", "label": "Today 2:00 PM EST"},
-      {"date": "2025-01-16", "time": "10:00", "label": "Tomorrow 10:00 AM EST"}
-    ],
-    "priority": "high|medium|low"
-  }
-}
+**Meeting Detection** (if applicable)
+If a meeting is suggested/requested, identify:
+- Meeting purpose and type
+- Suggested attendees (include original email sender if from email context)
+- Recommended duration
+- Best time slots this week or next week (in ${timezoneLabel})
+- Whether it should be virtual (Teams/Zoom) or in-person
 
-If no meeting is detected, set "meetingDetected": false.
+**Specific Recommendations**
+Provide actionable scheduling suggestions with ${timezoneLabel} times.
 
-Remember: All suggested times must be in Eastern Time and clearly labeled as EST.`;
+IMPORTANT: After your main response, if you detect a meeting should be scheduled, add ONLY this JSON on a separate line:
+{"meetingDetected": true, "meetingDetails": {"title": "title", "duration": 60, "attendees": ["email"], "description": "description", "meetingType": "teams", "suggestedTimes": [{"date": "2025-08-21", "time": "14:00", "label": "Tomorrow 2:00 PM ${timezoneLabel}"}], "priority": "medium"}}
+
+If no meeting is detected, add only:
+{"meetingDetected": false}`;
 
         const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
             model: 'claude-sonnet-4-20250514',
@@ -1074,25 +1177,36 @@ Remember: All suggested times must be in Eastern Time and clearly labeled as EST
             }
         });
 
-        const responseText = claudeResponse.data.content[0].text;
+        let responseText = claudeResponse.data.content[0].text;
         
-        // Try to extract JSON from response
+        // Extract and clean JSON from response
         let meetingData = null;
-        const jsonMatch = responseText.match(/\{[\s\S]*"meetingDetected"[\s\S]*\}/);
+        const jsonMatch = responseText.match(/\{[\s\S]*?"meetingDetected"[\s\S]*?\}/);
+        
         if (jsonMatch) {
             try {
                 meetingData = JSON.parse(jsonMatch[0]);
+                // Remove the JSON from the main response text
+                responseText = responseText.replace(jsonMatch[0], '').trim();
+                
                 // Ensure all suggested times include timezone info
                 if (meetingData.meetingDetails && meetingData.meetingDetails.suggestedTimes) {
                     meetingData.meetingDetails.suggestedTimes = meetingData.meetingDetails.suggestedTimes.map(time => ({
                         ...time,
-                        timezone: 'America/New_York'
+                        timezone: userTimezone,
+                        timezoneLabel: timezoneLabel
                     }));
                 }
             } catch (e) {
                 console.log('Could not parse meeting JSON:', e);
+                // Remove any malformed JSON from response
+                responseText = responseText.replace(/\{[\s\S]*?\}/g, '').trim();
             }
         }
+
+        // Clean up any remaining JSON artifacts
+        responseText = responseText.replace(/```json[\s\S]*?```/g, '').trim();
+        responseText = responseText.replace(/```[\s\S]*?```/g, '').trim();
 
         res.json({
             success: true,
@@ -1101,7 +1215,13 @@ Remember: All suggested times must be in Eastern Time and clearly labeled as EST
             emailCount: emails.value.length,
             eventCount: events.value.length,
             currentTime: currentTime,
-            timezone: userTimezone
+            timezone: userTimezone,
+            timezoneLabel: timezoneLabel,
+            debug: {
+                queryStartUTC: dateRange.start.toISOString(),
+                queryEndUTC: dateRange.end.toISOString(),
+                userTimezone: userTimezone
+            }
         });
         
     } catch (error) {
