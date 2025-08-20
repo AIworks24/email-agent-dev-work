@@ -315,9 +315,9 @@ router.get('/org/:id', requireAdminAuth, async (req, res) => {
 // Logout
 router.get('/logout', logoutAdmin);
 
-// Helper function to generate admin dashboard HTML
 function generateAdminHTML(organizations, stats, adminUser) {
     const recentOrgs = organizations.slice(0, 10);
+    const totalLogins = organizations.reduce((total, org) => total + (org.userCount || 0), 0);
     
     return `
     <!DOCTYPE html>
@@ -326,165 +326,40 @@ function generateAdminHTML(organizations, stats, adminUser) {
         <title>AI Email Agent - Admin Dashboard</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                margin: 0;
-                background: #f8f9fa;
-                color: #333;
-            }
-            .header {
-                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-                color: white;
-                padding: 20px 30px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .header h1 {
-                margin: 0;
-                font-weight: 300;
-            }
-            .admin-info {
-                text-align: right;
-                font-size: 14px;
-            }
-            .container {
-                max-width: 1400px;
-                margin: 0 auto;
-                padding: 30px;
-            }
-            .success-banner {
-                background: #d4edda;
-                color: #155724;
-                padding: 15px;
-                border-radius: 8px;
-                margin-bottom: 20px;
-                border: 1px solid #c3e6cb;
-            }
-            .stats-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-                margin-bottom: 40px;
-            }
-            .stat-card {
-                background: white;
-                padding: 25px;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-                border-left: 4px solid #28a745;
-            }
-            .stat-value {
-                font-size: 2.5em;
-                font-weight: bold;
-                color: #28a745;
-                line-height: 1;
-            }
-            .stat-label {
-                color: #666;
-                margin-top: 8px;
-                font-size: 14px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .main-content {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: 30px;
-            }
-            .panel {
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-                overflow: hidden;
-            }
-            .panel-title {
-                background: #28a745;
-                color: white;
-                padding: 15px 20px;
-                font-weight: 600;
-                font-size: 18px;
-            }
-            .table-container {
-                overflow-x: auto;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th, td {
-                padding: 12px;
-                text-align: left;
-                border-bottom: 1px solid #eee;
-            }
-            th {
-                background: #f8f9fa;
-                font-weight: 600;
-                color: #333;
-            }
-            .status-active {
-                color: #28a745;
-                font-weight: 600;
-            }
-            .status-inactive {
-                color: #dc3545;
-                font-weight: 600;
-            }
-            .actions-panel {
-                padding: 20px;
-            }
-            .action-button {
-                display: block;
-                width: 100%;
-                padding: 12px 16px;
-                margin-bottom: 10px;
-                background: #28a745;
-                color: white;
-                text-decoration: none;
-                border-radius: 8px;
-                text-align: center;
-                font-weight: 500;
-                transition: background 0.3s;
-            }
-            .action-button:hover {
-                background: #218838;
-                color: white;
-            }
-            .action-button.secondary {
-                background: #6c757d;
-            }
-            .action-button.secondary:hover {
-                background: #5a6268;
-            }
-            .action-button.danger {
-                background: #dc3545;
-            }
-            .action-button.danger:hover {
-                background: #c82333;
-            }
-            .empty-state {
-                text-align: center;
-                padding: 40px;
-                color: #666;
-            }
-            .refresh-note {
-                text-align: center;
-                color: #666;
-                font-size: 12px;
-                margin-top: 20px;
-            }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #f8f9fa; }
+            .header { background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .admin-info { text-align: right; font-size: 14px; opacity: 0.9; }
+            .container { max-width: 1200px; margin: 0 auto; padding: 30px; }
+            .success-banner { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #28a745; }
+            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            .stat-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; border-left: 4px solid #28a745; }
+            .stat-value { font-size: 48px; font-weight: bold; color: #28a745; margin-bottom: 10px; }
+            .stat-label { color: #666; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
+            .main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+            .panel { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+            .panel-title { background: #28a745; color: white; padding: 20px; font-size: 18px; font-weight: 600; margin: 0; }
+            .panel-content { padding: 30px; }
+            .actions-panel { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .action-button { display: block; width: 100%; padding: 15px 20px; margin-bottom: 10px; background: #28a745; color: white; text-decoration: none; border-radius: 8px; text-align: center; font-weight: 500; transition: background 0.3s; }
+            .action-button:hover { background: #218838; color: white; }
+            .action-button.secondary { background: #6c757d; }
+            .action-button.secondary:hover { background: #5a6268; }
+            .action-button.danger { background: #dc3545; }
+            .action-button.danger:hover { background: #c82333; }
+            .org-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            .org-table th, .org-table td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+            .org-table th { background: #f8f9fa; font-weight: 600; }
+            .org-table tr:hover { background: #f8f9fa; }
+            .status-active { color: #28a745; font-weight: 600; }
+            .status-inactive { color: #dc3545; font-weight: 600; }
+            .login-count { color: #007bff; font-weight: 600; }
+            .empty-state { text-align: center; padding: 40px; color: #666; }
+            .refresh-note { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
             @media (max-width: 768px) {
-                .main-content {
-                    grid-template-columns: 1fr;
-                }
-                .container {
-                    padding: 20px;
-                }
-                .header {
-                    padding: 15px 20px;
-                    flex-direction: column;
-                    gap: 10px;
-                }
+                .main-content { grid-template-columns: 1fr; }
+                .container { padding: 20px; }
+                .header { padding: 15px 20px; flex-direction: column; gap: 10px; }
             }
         </style>
     </head>
@@ -499,7 +374,7 @@ function generateAdminHTML(organizations, stats, adminUser) {
         
         <div class="container">
             <div class="success-banner">
-                ✅ <strong>Admin Dashboard Connected:</strong> Successfully using the same database connection as your main application.
+                ✅ <strong>Admin Dashboard Connected:</strong> Tracking ${stats.totalOrganizations} organizations with ${totalLogins} total logins.
             </div>
             
             <div class="stats-grid">
@@ -516,46 +391,45 @@ function generateAdminHTML(organizations, stats, adminUser) {
                     <div class="stat-label">New This Week</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${stats.activeSessions}</div>
-                    <div class="stat-label">Active Admin Sessions</div>
+                    <div class="stat-value">${totalLogins}</div>
+                    <div class="stat-label">Total Logins</div>
                 </div>
             </div>
             
             <div class="main-content">
                 <div class="panel">
                     <div class="panel-title">
-                        🏢 Client Organizations
+                        🏢 Client Organizations (${organizations.length})
                     </div>
-                    ${organizations.length === 0 ? `
-                        <div class="empty-state">
-                            <h3>✅ Production Ready</h3>
-                            <p>Your AI Email Agent is live and ready for client organizations. When clients authenticate with their Microsoft 365 accounts, their organizations will automatically appear here.</p>
+                    ${organizations.length === 0 ? 
+                        `<div class="empty-state">
+                            <h3>Ready for Client Organizations</h3>
+                            <p>When clients authenticate with their Microsoft 365 accounts, their organizations will appear here with login tracking.</p>
                             <p><strong>Database:</strong> Connected and operational</p>
-                        </div>
-                    ` : `
-                        <div class="table-container">
-                            <table>
+                        </div>` : 
+                        `<div class="panel-content">
+                            <table class="org-table">
                                 <thead>
                                     <tr>
                                         <th>Organization</th>
                                         <th>Domain</th>
                                         <th>Tier</th>
                                         <th>Status</th>
-                                        <th>Users</th>
+                                        <th>Total Logins</th>
                                         <th>Created</th>
-                                        <th>Updated</th>
+                                        <th>Last Active</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${recentOrgs.map(org => `
                                         <tr>
                                             <td><strong>${org.organizationName}</strong></td>
-                                            <td>${org.domain || '-'}</td>
-                                            <td><span style="text-transform: capitalize;">${org.subscriptionTier}</span></td>
+                                            <td>${org.domain || 'N/A'}</td>
+                                            <td style="text-transform: capitalize;">${org.subscriptionTier}</td>
                                             <td class="${org.isActive ? 'status-active' : 'status-inactive'}">
                                                 ${org.isActive ? 'Active' : 'Inactive'}
                                             </td>
-                                            <td>${org.userCount || 0}</td>
+                                            <td class="login-count">${org.userCount || 0}</td>
                                             <td>${new Date(org.createdAt).toLocaleDateString()}</td>
                                             <td>${new Date(org.updatedAt).toLocaleDateString()}</td>
                                         </tr>
@@ -563,8 +437,8 @@ function generateAdminHTML(organizations, stats, adminUser) {
                                 </tbody>
                             </table>
                             ${organizations.length > 10 ? `<p style="text-align: center; margin-top: 15px; color: #666;">Showing 10 of ${organizations.length} organizations</p>` : ''}
-                        </div>
-                    `}
+                        </div>`
+                    }
                 </div>
                 
                 <div class="actions-panel">
@@ -593,18 +467,19 @@ function generateAdminHTML(organizations, stats, adminUser) {
                     </a>
                     
                     <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <h4 style="margin: 0 0 10px 0; color: #333;">Subscription Breakdown</h4>
-                        <p style="margin: 5px 0; font-size: 14px;">Free: ${stats.subscriptionBreakdown.free}</p>
-                        <p style="margin: 5px 0; font-size: 14px;">Basic: ${stats.subscriptionBreakdown.basic}</p>
-                        <p style="margin: 5px 0; font-size: 14px;">Premium: ${stats.subscriptionBreakdown.premium}</p>
+                        <h4 style="margin: 0 0 10px 0; color: #333;">Usage Overview</h4>
+                        <p style="margin: 5px 0; font-size: 14px;">Free Tier: ${stats.subscriptionBreakdown.free}</p>
+                        <p style="margin: 5px 0; font-size: 14px;">Basic Tier: ${stats.subscriptionBreakdown.basic}</p>
+                        <p style="margin: 5px 0; font-size: 14px;">Premium Tier: ${stats.subscriptionBreakdown.premium}</p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+                        <p style="margin: 5px 0; font-size: 14px;">Total Logins: ${totalLogins}</p>
                         <p style="margin: 5px 0; font-size: 14px;">Admin Sessions: ${stats.activeSessions}</p>
                     </div>
                 </div>
             </div>
             
             <div class="refresh-note">
-                Using shared database connection. Last refresh: ${new Date().toLocaleString()}
+                Login tracking active. Last refresh: ${new Date().toLocaleString()}
             </div>
         </div>
     </body>
