@@ -3,115 +3,82 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
-
 const { initializeDatabase } = require('./src/config/initDatabase');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// MOVE THESE FUNCTIONS OUTSIDE THE DATABASE CALLBACK
+/**
+ * Helper function to determine if we're in Daylight Saving Time
+ */
+function isInDST(date = new Date()) {
+    const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
+    const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+    return Math.max(jan, jul) !== date.getTimezoneOffset();
+}
+
+/**
+ * Get timezone label (EST vs EDT) based on current date
+ */
+function getTimezoneLabel(date = new Date()) {
+    return isInDST(date) ? 'EDT' : 'EST';
+}
+
+/**
+ * Create timezone-aware date range for calendar queries
+ */
+function createUserTimezoneDateRange(userTimezone = 'America/New_York', days = 7) {
+    const now = new Date();
+    
+    // Create start of current day in user timezone
+    const startDate = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+    startDate.setHours(0, 0, 0, 0);
+    
+    // Create end date (start + days) in user timezone
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + days);
+    endDate.setHours(23, 59, 59, 999);
+    
+    return {
+        start: startDate,
+        end: endDate,
+        userTimezone,
+        timezoneLabel: getTimezoneLabel()
+    };
+}
+
+/**
+ * Create timezone-aware date range for a specific day
+ */
+function createUserTimezoneDay(userTimezone = 'America/New_York', daysOffset = 0) {
+    const now = new Date();
+    
+    // Get today in user timezone and add offset
+    const targetDate = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
+    targetDate.setDate(targetDate.getDate() + daysOffset);
+    
+    // Create start of day (00:00:00)
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    // Create end of day (23:59:59)
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return {
+        start: startOfDay,
+        end: endOfDay,
+        userTimezone,
+        timezoneLabel: getTimezoneLabel()
+    };
+}
+
+// Initialize database
 initializeDatabase().then(success => {
     if (success) {
         console.log('🚀 Database ready for multi-tenant operations');
     } else {
         console.error('⚠️ Database initialization failed - some features may not work');
-    }
-    // Add these utility functions at the top of your server.js file
-
-    /**
-     * Helper function to determine if we're in Daylight Saving Time
-     */
-    function isInDST(date = new Date()) {
-        const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
-        const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
-        return Math.max(jan, jul) !== date.getTimezoneOffset();
-    }
-    
-    /**
-     * Get timezone label (EST vs EDT) based on current date
-     */
-    function getTimezoneLabel(date = new Date()) {
-        return isInDST(date) ? 'EDT' : 'EST';
-    }
-    
-    /**
-     * Create timezone-aware date range for a specific day
-     * Returns start and end of day in the user's timezone, properly converted to UTC for API calls
-     */
-    function createUserTimezoneDay(userTimezone = 'America/New_York', daysOffset = 0) {
-        // Get current date in user's timezone
-        const now = new Date();
-        const userDate = new Date(now.toLocaleString('en-US', { timeZone: userTimezone }));
-        
-        // Add days offset if needed
-        userDate.setDate(userDate.getDate() + daysOffset);
-        
-        // Create start of day (00:00:00) in user's timezone
-        const startOfDayLocal = new Date(userDate.getFullYear(), userDate.getMonth(), userDate.getDate(), 0, 0, 0);
-        
-        // Create end of day (23:59:59) in user's timezone  
-        const endOfDayLocal = new Date(userDate.getFullYear(), userDate.getMonth(), userDate.getDate(), 23, 59, 59);
-        
-        // Convert to UTC by adjusting for timezone offset
-        const startOfDayUTC = new Date(startOfDayLocal.getTime() - (startOfDayLocal.getTimezoneOffset() * 60000));
-        const endOfDayUTC = new Date(endOfDayLocal.getTime() - (endOfDayLocal.getTimezoneOffset() * 60000));
-        
-        // Get the timezone offset for the user's timezone
-        const tempDate = new Date();
-        const userTimezoneOffset = new Date(tempDate.toLocaleString('en-US', { timeZone: userTimezone })).getTime() - tempDate.getTime();
-        
-        // Adjust for user's timezone
-        const adjustedStart = new Date(startOfDayUTC.getTime() - userTimezoneOffset);
-        const adjustedEnd = new Date(endOfDayUTC.getTime() - userTimezoneOffset);
-        
-        return {
-            start: adjustedStart,
-            end: adjustedEnd,
-            userTimezone,
-            timezoneLabel: getTimezoneLabel()
-        };
-    }
-    
-    /**
-     * Create proper date range for calendar queries in user's timezone
-     */
-    function createUserTimezoneDateRange(userTimezone = 'America/New_York', days = 7) {
-        // Get current moment in user's timezone
-        const nowInUserTZ = new Date(new Date().toLocaleString('en-US', { timeZone: userTimezone }));
-        
-        // Calculate start (beginning of current day in user TZ)
-        const startDate = new Date(nowInUserTZ);
-        startDate.setHours(0, 0, 0, 0);
-        
-        // Calculate end (end of day + number of days in user TZ)
-        const endDate = new Date(nowInUserTZ);
-        endDate.setDate(endDate.getDate() + days);
-        endDate.setHours(23, 59, 59, 999);
-        
-        // Convert to proper UTC dates for API calls
-        // We need to account for the difference between server timezone and user timezone
-        const serverOffset = new Date().getTimezoneOffset();
-        const userOffset = getUserTimezoneOffset(userTimezone);
-        const offsetDiff = (userOffset - serverOffset) * 60000; // Convert to milliseconds
-        
-        const utcStart = new Date(startDate.getTime() - offsetDiff);
-        const utcEnd = new Date(endDate.getTime() - offsetDiff);
-        
-        return {
-            start: utcStart,
-            end: utcEnd,
-            userTimezone,
-            timezoneLabel: getTimezoneLabel()
-        };
-    }
-    
-    /**
-     * Get timezone offset in minutes for a specific timezone
-     */
-    function getUserTimezoneOffset(timezone) {
-        const now = new Date();
-        const utcTime = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const userTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-        return (utcTime.getTime() - userTime.getTime()) / 60000;
     }
 });
 
