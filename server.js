@@ -367,7 +367,6 @@ app.get('/api/debug/graph', async (req, res) => {
 });
 
 // API Routes
-// Replace the existing /api/emails endpoint in your server.js with this improved version:
 
 app.get('/api/emails', async (req, res) => {
     const accessToken = req.cookies.accessToken;
@@ -376,19 +375,24 @@ app.get('/api/emails', async (req, res) => {
     }
     
     try {
-        const { days = 1 } = req.query;
+        const { days = 7 } = req.query; // Default to 7 days instead of 1
         const graphClient = createGraphClient(accessToken);
+        
+        console.log('📧 Loading emails for the past', days, 'days');
         
         // Get current user info to filter out sent emails
         const userProfile = await graphClient.api('/me').select('mail').get();
         
-        // Get emails from Inbox folder specifically to avoid sent items
+        // Calculate date range
+        const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        
+        // Get emails from Inbox folder with increased limit
         const emails = await graphClient
             .api('/me/mailFolders/inbox/messages')
-            .filter(`receivedDateTime ge ${new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()}`)
+            .filter(`receivedDateTime ge ${sinceDate.toISOString()}`)
             .select('id,subject,from,sender,receivedDateTime,bodyPreview,isRead,importance,hasAttachments,parentFolderId')
             .orderby('receivedDateTime desc')
-            .top(50)
+            .top(200) // Increased from 50 to 200
             .get();
         
         // Additional filtering on the server side to ensure we only get received emails
@@ -398,10 +402,22 @@ app.get('/api/emails', async (req, res) => {
             return fromEmail && fromEmail.toLowerCase() !== userProfile.mail?.toLowerCase();
         });
         
+        console.log('📊 Email loading results:', {
+            totalFound: emails.value.length,
+            filteredReceived: receivedEmails.length,
+            userEmail: userProfile.mail,
+            dateRange: `${sinceDate.toISOString()} to ${new Date().toISOString()}`
+        });
+        
         res.json({
             success: true,
             count: receivedEmails.length,
-            emails: receivedEmails
+            emails: receivedEmails,
+            totalDays: parseInt(days),
+            dateRange: {
+                since: sinceDate.toISOString(),
+                until: new Date().toISOString()
+            }
         });
     } catch (error) {
         console.error('Error fetching emails:', error);
@@ -690,7 +706,7 @@ app.post('/api/emails/query', async (req, res) => {
     }
     
     try {
-        const { query } = req.body;
+        const { query, includeDays = 7 } = req.body; // Allow custom day range
         if (!query) {
             return res.status(400).json({ error: 'Query is required' });
         }
@@ -698,39 +714,60 @@ app.post('/api/emails/query', async (req, res) => {
         const graphClient = createGraphClient(accessToken);
         const axios = require('axios');
         
+        console.log('🤖 AI Email Analysis - Loading emails for', includeDays, 'days');
+        
+        // Get more emails for better AI analysis
+        const sinceDate = new Date(Date.now() - includeDays * 24 * 60 * 60 * 1000);
+        
         const emails = await graphClient
-            .api('/me/messages')
-            .top(20)
-            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance')
+            .api('/me/mailFolders/inbox/messages')
+            .filter(`receivedDateTime ge ${sinceDate.toISOString()}`)
+            .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance,hasAttachments')
+            .orderby('receivedDateTime desc')
+            .top(100) // Increased from 20 to 100 for better AI analysis
             .get();
 
         const emailSummary = emails.value.map((email, index) => {
             const from = email.from?.emailAddress?.address || 'Unknown sender';
             const name = email.from?.emailAddress?.name || '';
             const date = new Date(email.receivedDateTime).toLocaleDateString();
-            const preview = email.bodyPreview?.substring(0, 100) || 'No preview';
+            const time = new Date(email.receivedDateTime).toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+            const preview = email.bodyPreview?.substring(0, 150) || 'No preview'; // Slightly longer previews
+            const importanceIcon = email.importance === 'high' ? '🔴 ' : email.importance === 'low' ? '🔵 ' : '';
+            const unreadIcon = !email.isRead ? '📩 ' : '';
+            const attachmentIcon = email.hasAttachments ? '📎 ' : '';
             
-            return `${index + 1}. From: ${name} <${from}>
+            return `${index + 1}. ${unreadIcon}${importanceIcon}From: ${name} <${from}>
    Subject: ${email.subject}
-   Date: ${date}
+   Date: ${date} ${time}
    Read: ${email.isRead ? 'Yes' : 'No'}
-   Preview: ${preview}...`;
+   ${attachmentIcon}Preview: ${preview}...`;
         }).join('\n\n');
+
+        console.log('📈 Email analysis context:', {
+            emailsAnalyzed: emails.value.length,
+            dateRange: includeDays + ' days',
+            queryLength: query.length
+        });
 
         const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 1500,
+            max_tokens: 2000, // Increased token limit for more comprehensive analysis
             messages: [
                 { 
                     role: 'user', 
-                    content: `You are an AI assistant helping to manage Microsoft 365 emails. Provide helpful, concise responses.
+                    content: `You are an AI assistant helping to manage Microsoft 365 emails. You have access to ${emails.value.length} emails from the past ${includeDays} days. Provide helpful, detailed responses.
 
 User Query: ${query}
 
-Recent Email Data:
+Recent Email Data (${emails.value.length} emails from past ${includeDays} days):
 ${emailSummary}
 
-Provide a helpful response to the user's query. Be specific and actionable.`
+Provide a comprehensive response to the user's query. Be specific and actionable. Include relevant email details, patterns, and insights where appropriate.`
                 }
             ]
         }, {
@@ -745,7 +782,9 @@ Provide a helpful response to the user's query. Be specific and actionable.`
             success: true,
             query: query,
             response: claudeResponse.data.content[0].text,
-            emailCount: emails.value.length
+            emailCount: emails.value.length,
+            daysAnalyzed: includeDays,
+            analysisScope: `${emails.value.length} emails from ${includeDays} days`
         });
         
     } catch (error) {
