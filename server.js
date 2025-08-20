@@ -143,7 +143,7 @@ app.get('/auth/callback', async (req, res) => {
         const organizationName = response.account.tenantDisplayName || 'Unknown Organization';
         const userDomain = response.account.username.split('@')[1];
         
-        // Store/update organization in database
+        // Store/update organization in database and INCREMENT login count
         try {
             const ClientOrganization = require('./src/models/ClientOrganization');
             
@@ -153,16 +153,22 @@ app.get('/auth/callback', async (req, res) => {
                     organizationName: organizationName,
                     domain: userDomain,
                     subscriptionTier: 'free',
-                    isActive: true
+                    isActive: true,
+                    userCount: 1, // First login = 1
+                    lastActiveAt: new Date()
                 }
             });
             
             if (created) {
-                console.log(`🎉 New organization registered: ${organizationName} (${tenantId})`);
+                console.log(`🎉 New organization registered: ${organizationName} (${tenantId}) - Login count: 1`);
             } else {
-                // Update last activity
-                await organization.update({ updatedAt: new Date() });
-                console.log(`✅ Existing organization login: ${organizationName}`);
+                // ALWAYS increment login count on each login (regardless of user)
+                await organization.update({ 
+                    updatedAt: new Date(),
+                    lastActiveAt: new Date(),
+                    userCount: organization.userCount + 1 // Increment total login count
+                });
+                console.log(`✅ User login: ${response.account.username} from ${organizationName} - Total logins: ${organization.userCount + 1}`);
             }
             
             const userData = {
@@ -221,6 +227,32 @@ app.get('/auth/callback', async (req, res) => {
             error: 'Token exchange failed',
             message: error.message
         });
+    }
+});
+
+app.get('/auth/logout', (req, res) => {
+    console.log('🚪 User logout requested');
+    
+    try {
+        const userData = req.cookies.userData;
+        if (userData) {
+            const user = JSON.parse(userData);
+            console.log(`👋 User logging out: ${user.username} from ${user.organizationName || 'Unknown Org'}`);
+        }
+        
+        // Clear authentication cookies
+        res.clearCookie('accessToken');
+        res.clearCookie('userData');
+        
+        console.log('✅ User session cleared - redirecting to home');
+        res.redirect('/');
+        
+    } catch (error) {
+        console.error('Logout error:', error);
+        // Still clear cookies and redirect even if there's an error
+        res.clearCookie('accessToken');
+        res.clearCookie('userData');
+        res.redirect('/');
     }
 });
 
