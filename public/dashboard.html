@@ -730,42 +730,6 @@
 
                 /* Enhanced Dark mode support */
         @media (prefers-color-scheme: dark) {
-             /* Fix header text visibility - make it bright white */
-                .section-title, 
-                .section-subtitle,
-                .stat-value,
-                .stat-label {
-                    color: #ffffff !important;
-                }
-                
-                /* Fix card header text */
-                .content-section h2,
-                .content-section h3,
-                .section-header .section-title {
-                    color: #ffffff !important;
-                }
-                
-                /* Make sure response area placeholder text is visible */
-                .response-area {
-                    color: #ffffff !important;
-                }
-                
-                /* Keep the productivity score and other stats white */
-                .stat-card .stat-value {
-                    color: #ffffff !important;
-                }
-                
-                /* Ensure all main text is white, not gray */
-                h1, h2, h3, h4, h5, h6 {
-                    color: #ffffff !important;
-                }
-                
-                /* Keep button text white */
-                .quick-action,
-                .btn {
-                    color: #ffffff !important;
-                }
-            }
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
                 color: #ffffff;
@@ -777,26 +741,42 @@
                 border: 1px solid #4a4a4a;
             }
             
+            /* Input fields - properly scoped to dark mode only */
             .form-input, .form-select, .form-textarea {
-                background: #3a3a3a !important;
-                border-color: #667eea !important;
-                color: #ffffff !important;
+                background: #3a3a3a;
+                border-color: #667eea;
+                color: #ffffff;
             }
             
             .form-input::placeholder,
             .form-select::placeholder, 
             .form-textarea::placeholder {
-                color: #cccccc !important;
-                opacity: 1 !important;
+                color: #cccccc;
+                opacity: 1;
             }
             
+            /* Response areas - properly scoped */
             .response-area {
-                background: #3a3a3a !important;
-                border-color: #667eea !important;
-                color: #ffffff !important;
-            .response-area *, .response-area h1, .response-area h2, .response-area h3, 
-            .response-area p, .response-area div, .response-area span, .response-area li {
-                color: #ffffff !important;
+                background: #3a3a3a;
+                border-color: #667eea;
+                color: #ffffff;
+            }
+            
+            /* All text inside response areas */
+            .response-area *,
+            .response-area h1, 
+            .response-area h2, 
+            .response-area h3, 
+            .response-area h4, 
+            .response-area h5, 
+            .response-area h6,
+            .response-area p,
+            .response-area div,
+            .response-area span,
+            .response-area li,
+            .response-area strong,
+            .response-area em {
+                color: #ffffff;
             }
             
             .form-label {
