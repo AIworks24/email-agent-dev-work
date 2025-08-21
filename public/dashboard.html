@@ -730,6 +730,42 @@
 
                 /* Enhanced Dark mode support */
         @media (prefers-color-scheme: dark) {
+             /* Fix header text visibility - make it bright white */
+                .section-title, 
+                .section-subtitle,
+                .stat-value,
+                .stat-label {
+                    color: #ffffff !important;
+                }
+                
+                /* Fix card header text */
+                .content-section h2,
+                .content-section h3,
+                .section-header .section-title {
+                    color: #ffffff !important;
+                }
+                
+                /* Make sure response area placeholder text is visible */
+                .response-area {
+                    color: #ffffff !important;
+                }
+                
+                /* Keep the productivity score and other stats white */
+                .stat-card .stat-value {
+                    color: #ffffff !important;
+                }
+                
+                /* Ensure all main text is white, not gray */
+                h1, h2, h3, h4, h5, h6 {
+                    color: #ffffff !important;
+                }
+                
+                /* Keep button text white */
+                .quick-action,
+                .btn {
+                    color: #ffffff !important;
+                }
+            }
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
                 color: #ffffff;
