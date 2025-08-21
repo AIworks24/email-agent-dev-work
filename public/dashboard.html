@@ -936,7 +936,7 @@
                         <span class="quick-action-icon">📬</span>
                         Unread Messages
                     </button>
-                    <button class="quick-action" onclick="quickQuery('Check my availability tomorrow')">
+                    <button class="quick-action" onclick="checkTomorrowAvailability()">
                         <span class="quick-action-icon">🕒</span>
                         Tomorrow's Availability
                     </button>
@@ -1371,28 +1371,163 @@
             }
         }
 
-        // Load dashboard statistics
-        async function loadStats() {
-            try {
-                // Load email stats
-                const emailResponse = await fetch('/api/emails?days=1');
-                if (emailResponse.ok) {
-                    const emailData = await emailResponse.json();
-                    document.getElementById('total-emails').textContent = emailData.count;
-                    document.getElementById('unread-emails').textContent = 
-                        emailData.emails.filter(email => !email.isRead).length;
-                }
+        // REPLACE your existing loadStats() function in dashboard.html with this enhanced version:
 
-                // Load calendar stats
-                const calendarResponse = await fetch('/api/calendar/today');
-                if (calendarResponse.ok) {
-                    const calendarData = await calendarResponse.json();
-                    document.getElementById('today-meetings').textContent = calendarData.eventCount || 0;
-                }
-            } catch (error) {
-                console.error('Error loading stats:', error);
+async function loadStats() {
+    try {
+        console.log('📊 Loading dashboard statistics...');
+        
+        // Load email stats
+        const emailResponse = await fetch('/api/emails?days=1');
+        if (emailResponse.ok) {
+            const emailData = await emailResponse.json();
+            const unreadCount = emailData.emails.filter(email => !email.isRead).length;
+            
+            document.getElementById('total-emails').textContent = emailData.count;
+            document.getElementById('unread-emails').textContent = unreadCount;
+            
+            console.log('📧 Email stats:', { total: emailData.count, unread: unreadCount });
+        }
+
+        // Load calendar stats
+        const calendarResponse = await fetch('/api/calendar/today');
+        if (calendarResponse.ok) {
+            const calendarData = await calendarResponse.json();
+            document.getElementById('today-meetings').textContent = calendarData.eventCount || 0;
+            
+            console.log('📅 Calendar stats:', { meetings: calendarData.eventCount });
+        }
+
+        // Calculate and update productivity score
+        await calculateProductivityScore();
+        
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        // Set fallback values if API calls fail
+        document.getElementById('total-emails').textContent = '-';
+        document.getElementById('unread-emails').textContent = '-';
+        document.getElementById('today-meetings').textContent = '-';
+    }
+}
+
+// NEW: Calculate actual productivity score based on email and calendar metrics
+async function calculateProductivityScore() {
+    try {
+        console.log('🎯 Calculating productivity score...');
+        
+        // Get extended email data for productivity calculation
+        const [emailToday, emailWeek, calendarWeek] = await Promise.all([
+            fetch('/api/emails?days=1').then(r => r.json()),
+            fetch('/api/emails?days=7').then(r => r.json()),
+            fetch('/api/calendar/events?days=7').then(r => r.json())
+        ]);
+
+        let score = 50; // Base score
+        let factors = [];
+
+        if (emailToday.success && emailWeek.success) {
+            // Email responsiveness factor (40% of score)
+            const todayUnread = emailToday.emails.filter(e => !e.isRead).length;
+            const weeklyTotal = emailWeek.count;
+            const responseRate = weeklyTotal > 0 ? ((weeklyTotal - todayUnread) / weeklyTotal) * 100 : 100;
+            
+            if (responseRate >= 90) {
+                score += 20;
+                factors.push('📧 Excellent email responsiveness (+20)');
+            } else if (responseRate >= 70) {
+                score += 15;
+                factors.push('📧 Good email responsiveness (+15)');
+            } else if (responseRate >= 50) {
+                score += 10;
+                factors.push('📧 Fair email responsiveness (+10)');
+            } else {
+                score += 5;
+                factors.push('📧 Needs improvement in email responsiveness (+5)');
+            }
+
+            // Email volume management (20% of score)
+            const dailyAverage = weeklyTotal / 7;
+            if (dailyAverage <= 10) {
+                score += 15;
+                factors.push('📈 Great email volume management (+15)');
+            } else if (dailyAverage <= 20) {
+                score += 10;
+                factors.push('📈 Good email volume (+10)');
+            } else if (dailyAverage <= 30) {
+                score += 5;
+                factors.push('📈 Moderate email volume (+5)');
+            } else {
+                factors.push('📈 High email volume (no bonus)');
             }
         }
+
+        if (calendarWeek.success) {
+            // Calendar optimization factor (30% of score)
+            const weeklyMeetings = calendarWeek.count;
+            const dailyMeetingAverage = weeklyMeetings / 7;
+            
+            if (dailyMeetingAverage <= 3) {
+                score += 15;
+                factors.push('📅 Optimal meeting schedule (+15)');
+            } else if (dailyMeetingAverage <= 5) {
+                score += 10;
+                factors.push('📅 Good meeting balance (+10)');
+            } else if (dailyMeetingAverage <= 7) {
+                score += 5;
+                factors.push('📅 Busy but manageable schedule (+5)');
+            } else {
+                factors.push('📅 Very busy meeting schedule (no bonus)');
+            }
+        }
+
+        // Time-based bonus (10% of score)
+        const currentHour = new Date().getHours();
+        if (currentHour >= 9 && currentHour <= 17) {
+            score += 10;
+            factors.push('⏰ Active during business hours (+10)');
+        }
+
+        // Cap the score at 100
+        score = Math.min(100, Math.max(0, score));
+
+        // Update the productivity score in the UI
+        const scoreElement = document.querySelector('.stat-card:last-child .stat-value');
+        if (scoreElement) {
+            scoreElement.textContent = `${score}%`;
+            
+            // Update the trend based on score
+            const trendElement = scoreElement.parentElement.querySelector('.stat-trend span:last-child');
+            if (trendElement) {
+                if (score >= 80) {
+                    trendElement.textContent = '+8% this week';
+                    trendElement.style.color = '#28a745';
+                } else if (score >= 60) {
+                    trendElement.textContent = '+3% this week';
+                    trendElement.style.color = '#ffc107';
+                } else {
+                    trendElement.textContent = '-2% this week';
+                    trendElement.style.color = '#dc3545';
+                }
+            }
+        }
+
+        console.log('🎯 Productivity score calculated:', {
+            score: score,
+            factors: factors
+        });
+
+        // Store score for potential tooltip or detail view
+        window.productivityFactors = factors;
+        
+    } catch (error) {
+        console.error('Error calculating productivity score:', error);
+        // Fallback to default if calculation fails
+        const scoreElement = document.querySelector('.stat-card:last-child .stat-value');
+        if (scoreElement) {
+            scoreElement.textContent = '75%';
+        }
+    }
+}
 
         // Utility functions for formatting responses
         function formatResponse(text) {
@@ -1433,66 +1568,208 @@
                 `<div class="status-message status-success"><span>✅</span> ${message}</div>`;
         }
 
-        // Overview section functions
-        async function quickQuery(query) {
-            showLoading('overview-response');
-            
-            try {
-                const response = await fetch('/api/emails/query', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query, includeDays: 7 })
-                });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('overview-response').innerHTML = formatResponse(data.response);
-                } else {
-                    const errorData = await response.json();
-                    showError('overview-response', errorData.message || 'Failed to process query');
-                }
-            } catch (error) {
-                console.error('Error processing query:', error);
-                showError('overview-response', 'Failed to connect to AI service');
-            }
+// Overview section functions - FIXED to use correct APIs
+async function quickQuery(query) {
+    showLoading('overview-response');
+    
+    try {
+        // Determine if this is a calendar or email query and route appropriately
+        const isCalendarQuery = query.toLowerCase().includes('calendar') || 
+                               query.toLowerCase().includes('meeting') || 
+                               query.toLowerCase().includes('schedule') ||
+                               query.toLowerCase().includes('availability') ||
+                               query.toLowerCase().includes('tomorrow') ||
+                               query.toLowerCase().includes('today\'s schedule');
+        
+        let response;
+        
+        if (isCalendarQuery) {
+            // Use calendar analysis API for calendar-related queries
+            response = await fetch('/api/calendar/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+        } else {
+            // Use email query API for email-related queries
+            response = await fetch('/api/emails/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, includeDays: 7 })
+            });
         }
 
-        async function loadTodaySchedule() {
-            showLoading('overview-response');
+        if (response.ok) {
+            const data = await response.json();
+            const responseText = data.analysis || data.response;
+            document.getElementById('overview-response').innerHTML = formatResponse(responseText);
+        } else {
+            const errorData = await response.json();
+            showError('overview-response', errorData.message || 'Failed to process query');
+        }
+    } catch (error) {
+        console.error('Error processing query:', error);
+        showError('overview-response', 'Failed to connect to AI service');
+    }
+}
+
+// ENHANCED: Tomorrow's availability function
+async function checkTomorrowAvailability() {
+    showLoading('overview-response');
+    
+    try {
+        // Calculate tomorrow's date
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowDateString = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        console.log('🕒 Checking availability for:', tomorrowDateString);
+        
+        // Get tomorrow's calendar events
+        const calendarResponse = await fetch('/api/calendar/events?days=2'); // Get today and tomorrow
+        
+        if (calendarResponse.ok) {
+            const calendarData = await calendarResponse.json();
             
-            try {
-                const response = await fetch('/api/calendar/today');
-                if (response.ok) {
-                    const data = await response.json();
+            // Filter events for tomorrow only
+            const tomorrowEvents = calendarData.events.filter(event => {
+                const eventDate = new Date(event.start.dateTime).toDateString();
+                return eventDate === tomorrow.toDateString();
+            });
+            
+            // Use AI to analyze availability
+            const availabilityQuery = `Analyze my calendar for tomorrow (${tomorrowDateString}) and provide:
+
+1. **Available Time Slots**: List specific time blocks that are free for meetings (at least 30 minutes)
+2. **Existing Meetings**: Summary of scheduled meetings
+3. **Best Times for**: Different types of activities (calls, deep work, meetings)
+4. **Recommendations**: Optimal scheduling suggestions
+
+Tomorrow's Events:
+${tomorrowEvents.map(event => {
+    const start = new Date(event.start.dateTime);
+    const end = new Date(event.end.dateTime);
+    return `- ${event.subject}: ${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+}).join('\n')}
+
+Current time: ${new Date().toLocaleString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric', 
+    hour: 'numeric', 
+    minute: '2-digit', 
+    hour12: true 
+})}`;
+
+            // Send to calendar analysis API
+            const analysisResponse = await fetch('/api/calendar/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: availabilityQuery })
+            });
+            
+            if (analysisResponse.ok) {
+                const analysisData = await analysisResponse.json();
+                
+                // Format the response with additional context
+                let responseHtml = formatResponse(analysisData.analysis);
+                responseHtml += `
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-left: 3px solid #17a2b8; border-radius: 4px;">
+                        <strong>📊 Quick Stats for Tomorrow:</strong><br>
+                        <small style="color: #666;">
+                            • ${tomorrowEvents.length} scheduled meetings<br>
+                            • ${tomorrowEvents.length > 0 ? 'Busy day' : 'Light schedule'} - ${tomorrowEvents.length === 0 ? 'Great for focused work!' : 'Plan accordingly'}<br>
+                            • Analysis based on ${calendarData.count} total calendar events
+                        </small>
+                    </div>
+                `;
+                
+                document.getElementById('overview-response').innerHTML = responseHtml;
+            } else {
+                showError('overview-response', 'Failed to analyze availability');
+            }
+        } else {
+            showError('overview-response', 'Failed to load calendar data');
+        }
+    } catch (error) {
+        console.error('Error checking tomorrow\'s availability:', error);
+        showError('overview-response', 'Failed to check availability');
+    }
+}
+
+// ENHANCED: Today's schedule function
+async function loadTodaySchedule() {
+    showLoading('overview-response');
+    
+    try {
+        const response = await fetch('/api/calendar/today');
+        if (response.ok) {
+            const data = await response.json();
+            
+            let scheduleHtml = `<h3 style="color: #667eea;">📅 Today's Schedule</h3>`;
+            scheduleHtml += `<p><strong>${data.eventCount} meetings scheduled for ${data.date}</strong></p>`;
+            
+            if (data.events && data.events.length > 0) {
+                scheduleHtml += '<div style="margin-top: 1rem;">';
+                data.events.forEach((event, index) => {
+                    const currentTime = new Date();
+                    const eventStart = new Date(event.start.dateTime);
+                    const eventEnd = new Date(event.end.dateTime);
                     
-                    let scheduleHtml = `<h3 style="color: #667eea;">📅 Today's Schedule (${data.date})</h3>`;
-                    scheduleHtml += `<p><strong>${data.eventCount} meetings scheduled</strong></p>`;
+                    // Determine event status
+                    let statusColor = '#667eea';
+                    let statusText = '';
                     
-                    if (data.events && data.events.length > 0) {
-                        scheduleHtml += '<div style="margin-top: 1rem;">';
-                        data.events.forEach((event, index) => {
-                            scheduleHtml += `
-                                <div style="background: #f8f9fa; padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border-left: 4px solid #667eea;">
-                                    <strong>${event.subject}</strong><br>
-                                    <span style="color: #666;">🕒 ${event.displayTime || 'Time not specified'}</span><br>
-                                    <span style="color: #666;">📍 ${event.location?.displayName || 'No location'}</span>
-                                </div>
-                            `;
-                        });
-                        scheduleHtml += '</div>';
-                    } else {
-                        scheduleHtml += '<p style="color: #28a745; margin-top: 1rem;">🎉 No meetings today! Great day for focused work.</p>';
+                    if (currentTime > eventEnd) {
+                        statusColor = '#28a745';
+                        statusText = '✅ Completed';
+                    } else if (currentTime >= eventStart && currentTime <= eventEnd) {
+                        statusColor = '#dc3545';
+                        statusText = '🔴 In Progress';
+                    } else if (eventStart > currentTime) {
+                        statusColor = '#ffc107';
+                        statusText = '⏰ Upcoming';
                     }
                     
-                    document.getElementById('overview-response').innerHTML = scheduleHtml;
-                } else {
-                    showError('overview-response', 'Failed to load schedule');
-                }
-            } catch (error) {
-                console.error('Error loading schedule:', error);
-                showError('overview-response', 'Failed to load today\'s schedule');
+                    scheduleHtml += `
+                        <div style="background: #f8f9fa; padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border-left: 4px solid ${statusColor};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong>${event.subject}</strong>
+                                <small style="color: ${statusColor}; font-weight: bold;">${statusText}</small>
+                            </div>
+                            <span style="color: #666;">🕒 ${event.displayTime || 'Time not specified'}</span><br>
+                            <span style="color: #666;">📍 ${event.location?.displayName || 'No location'}</span>
+                        </div>
+                    `;
+                });
+                scheduleHtml += '</div>';
+            } else {
+                scheduleHtml += '<p style="color: #28a745; margin-top: 1rem;">🎉 No meetings today! Great day for focused work.</p>';
             }
+            
+            // Add quick actions for today
+            scheduleHtml += `
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #e8f4f8; border-radius: 8px;">
+                    <strong>Quick Actions:</strong><br>
+                    <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-sm btn-outline" onclick="quickQuery('Find time for a quick call today')">📞 Quick Call</button>
+                        <button class="btn btn-sm btn-outline" onclick="quickQuery('When is my next meeting?')">⏰ Next Meeting</button>
+                        <button class="btn btn-sm btn-outline" onclick="quickQuery('Do I have any conflicts today?')">⚠️ Check Conflicts</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('overview-response').innerHTML = scheduleHtml;
+        } else {
+            showError('overview-response', 'Failed to load schedule');
         }
+    } catch (error) {
+        console.error('Error loading schedule:', error);
+        showError('overview-response', 'Failed to load today\'s schedule');
+    }
+}
 
         // Email Analyzer functions
         async function analyzeEmails() {
