@@ -2386,57 +2386,133 @@ async function moveSelectedToTrash() {
                     const data = await response.json();
                     generatedResponse = data;
                     
+                    // Display the response with threading information
                     document.getElementById('response-content').innerHTML = `
-                        <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                            <strong>To:</strong> ${data.originalFrom}<br>
-                            <strong>Subject:</strong> ${data.suggestedSubject}
+                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #28a745;">
+                            <h4 style="margin: 0 0 0.5rem; color: #155724;">🧵 Email Thread Reply</h4>
+                            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                                <strong>Reply to:</strong> ${data.originalFrom}<br>
+                                <strong>Subject:</strong> ${data.suggestedSubject}<br>
+                                <strong>Thread:</strong> This will be sent as a reply to maintain the email thread
+                                ${data.signatureIncluded ? '<br><strong>Signature:</strong> Your signature will be included' : ''}
+                            </p>
                         </div>
-                        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 2px solid #e1e5e9;">
-                            <h4 style="margin-bottom: 1rem; color: #333;">Generated Response:</h4>
-                            <div style="white-space: pre-wrap; line-height: 1.6;">${data.generatedResponse}</div>
+                        
+                        <div class="response-content">
+                            ${data.generatedResponse.replace(/\n/g, '<br>')}
+                        </div>
+                        
+                        <div style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                            <p style="margin: 0; font-size: 0.9rem; color: #1565c0;">
+                                <strong>💡 Threading Note:</strong> This response will be sent as a reply to the original email, 
+                                maintaining the conversation thread for better email organization.
+                            </p>
                         </div>
                     `;
+                    
+                    // Show send buttons
+                    document.getElementById('send-buttons').style.display = 'block';
                 } else {
                     const errorData = await response.json();
-                    showError('response-content', errorData.message || 'Failed to generate response');
+                    document.getElementById('response-content').innerHTML = `
+                        <div style="color: #d32f2f; background: #ffebee; padding: 1rem; border-radius: 8px;">
+                            Error: ${errorData.message || 'Failed to generate response'}
+                        </div>
+                    `;
                 }
             } catch (error) {
                 console.error('Error generating response:', error);
-                showError('response-content', 'Failed to generate email response');
+                document.getElementById('response-content').innerHTML = `
+                    <div style="color: #d32f2f; background: #ffebee; padding: 1rem; border-radius: 8px;">
+                        Error: Failed to generate response. Please try again.
+                    </div>
+                `;
             }
         }
-
-        async function sendResponse() {
+        
+        async function sendResponse(replyToAll = false) {
             if (!generatedResponse) {
-                alert('No response to send');
+                alert('Please generate a response first');
                 return;
             }
             
+            const responseType = replyToAll ? 'Reply to All' : 'Reply';
+            const sendBtn = document.querySelector(`button[onclick="sendResponse(${replyToAll})"]`);
+            const originalText = sendBtn.textContent;
+            sendBtn.textContent = `Sending ${responseType}...`;
+            sendBtn.disabled = true;
+            
             try {
-                const response = await fetch(`/api/emails/${selectedEmailId}/send`, {
+                const endpoint = replyToAll ? 'reply-all' : 'send';
+                const response = await fetch(`/api/emails/${selectedEmailId}/${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         responseContent: generatedResponse.generatedResponse,
-                        subject: generatedResponse.suggestedSubject
+                        subject: generatedResponse.suggestedSubject,
+                        replyToAll: replyToAll
                     })
                 });
                 
                 if (response.ok) {
-                    showSuccess('response-content', 'Email sent successfully!');
+                    const data = await response.json();
+                    
+                    // Show success message with threading confirmation
+                    const successDiv = document.createElement('div');
+                    successDiv.style.cssText = 'background: #d4edda; color: #155724; padding: 1.5rem; border-radius: 8px; margin: 1rem 0; border: 1px solid #c3e6cb;';
+                    successDiv.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <span style="font-size: 2rem;">✅</span>
+                            <div>
+                                <h4 style="margin: 0; color: #155724;">${responseType} Sent Successfully!</h4>
+                                <p style="margin: 0.5rem 0 0; font-size: 0.9rem;">
+                                    Your response was sent as a reply, maintaining the email thread.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+                            <strong>📊 Details:</strong><br>
+                            • Thread maintained: Yes<br>
+                            • Reply type: ${data.replyType}<br>
+                            • Sent by: ${data.sentBy}<br>
+                            • Message ID: ${data.messageId?.substring(0, 20)}...
+                        </div>
+                    `;
+                    
+                    // Insert success message
+                    const responsePreview = document.getElementById('response-preview');
+                    responsePreview.parentNode.insertBefore(successDiv, responsePreview);
+                    
+                    // Hide response form and reset
+                    document.getElementById('response-form').style.display = 'none';
+                    document.getElementById('response-preview').style.display = 'none';
+                    
+                    // Remove success message after 8 seconds
                     setTimeout(() => {
-                        cancelResponse();
-                    }, 2000);
+                        if (successDiv.parentNode) {
+                            successDiv.remove();
+                        }
+                    }, 8000);
+                    
+                    // Update stats
+                    if (typeof loadStats === 'function') {
+                        loadStats();
+                    }
+                    
                 } else {
                     const errorData = await response.json();
-                    showError('response-content', errorData.message || 'Failed to send email');
+                    alert(`Error sending ${responseType.toLowerCase()}: ${errorData.message || 'Failed to send response'}`);
                 }
             } catch (error) {
-                console.error('Error sending email:', error);
-                showError('response-content', 'Failed to send email');
+                console.error(`Error sending ${responseType.toLowerCase()}:`, error);
+                alert(`Failed to send ${responseType.toLowerCase()}. Please try again.`);
+            } finally {
+                // Restore button
+                sendBtn.textContent = originalText;
+                sendBtn.disabled = false;
             }
         }
-
         function editResponse() {
             if (!generatedResponse) return;
             
