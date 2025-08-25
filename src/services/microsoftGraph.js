@@ -52,7 +52,7 @@ class MicrosoftGraphService {
         try {
             const email = await this.graphClient
                 .api(`/me/messages/${emailId}`)
-                .select('id,subject,from,to,receivedDateTime,body,attachments,replyTo,conversationId')
+                .select('id,subject,from,toRecipients,receivedDateTime,body,attachments,replyTo,conversationId')
                 .get();
             
             return email;
