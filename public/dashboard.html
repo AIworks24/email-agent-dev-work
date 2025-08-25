@@ -1341,7 +1341,71 @@
                             </label>
                         </div>
                     </div>
-
+                    
+                    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #f0f0f0;">
+                        <h3 style="margin-bottom: 1rem; color: #667eea;">Email Signature Settings</h3>
+                        <p style="color: #666; margin-bottom: 1.5rem; font-size: 0.9rem;">
+                            Configure your email signature that will be automatically included in all AI-generated email responses.
+                        </p>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Full Name:</label>
+                            <input type="text" class="form-input" id="signature-name" 
+                                   placeholder="e.g., John Smith">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Job Title:</label>
+                            <input type="text" class="form-input" id="signature-title" 
+                                   placeholder="e.g., Senior Marketing Manager">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Company:</label>
+                            <input type="text" class="form-input" id="signature-company" 
+                                   placeholder="e.g., ABC Corporation">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Phone Number:</label>
+                            <input type="text" class="form-input" id="signature-phone" 
+                                   placeholder="e.g., (555) 123-4567">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email Address:</label>
+                            <input type="email" class="form-input" id="signature-email" 
+                                   placeholder="e.g., john.smith@company.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Website (optional):</label>
+                            <input type="url" class="form-input" id="signature-website" 
+                                   placeholder="e.g., https://www.company.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Additional Information (optional):</label>
+                            <textarea class="form-textarea" id="signature-additional" 
+                                      placeholder="e.g., Department, Location, or other contact details..." 
+                                      rows="2"></textarea>
+                        </div>
+                        
+                        <div style="margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e5e9;">
+                            <h4 style="margin-bottom: 0.5rem; color: #333; font-size: 0.9rem;">Preview:</h4>
+                            <div id="signature-preview" style="font-family: Arial, sans-serif; font-size: 0.85rem; line-height: 1.4; color: #666; border-left: 3px solid #667eea; padding-left: 1rem;">
+                                <em>Your signature preview will appear here...</em>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" id="signature-enabled" checked> 
+                                <span style="font-weight: 500;">Include signature in AI email responses</span>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <div style="padding-top: 2rem; border-top: 2px solid #f0f0f0;">
                         <button class="btn btn-primary" onclick="saveSettings()">
                             <span>💾</span>
@@ -2434,10 +2498,6 @@ async function moveSelectedToTrash() {
 
         // Settings functions
         function saveSettings() {
-            // In a real app, this would save to a backend
-            showSuccess('settings-section', 'Settings saved successfully!');
-            
-            // Store settings in localStorage for demo
             const settings = {
                 defaultTone: document.getElementById('default-tone').value,
                 summaryFrequency: document.getElementById('summary-frequency').value,
@@ -2446,6 +2506,11 @@ async function moveSelectedToTrash() {
             };
             
             localStorage.setItem('ai-email-agent-settings', JSON.stringify(settings));
+            
+            // Also save signature settings
+            saveSignatureSettings();
+            
+            showSuccess('settings-section', 'All settings saved successfully! 💾');
         }
 
         function resetSettings() {
@@ -2470,6 +2535,130 @@ async function moveSelectedToTrash() {
             }
         }
 
+        function updateSignaturePreview() {
+            const name = document.getElementById('signature-name').value.trim();
+            const title = document.getElementById('signature-title').value.trim();
+            const company = document.getElementById('signature-company').value.trim();
+            const phone = document.getElementById('signature-phone').value.trim();
+            const email = document.getElementById('signature-email').value.trim();
+            const website = document.getElementById('signature-website').value.trim();
+            const additional = document.getElementById('signature-additional').value.trim();
+            
+            let preview = '';
+            
+            if (name) {
+                preview += `<div style="font-weight: 600; color: #333;">${name}</div>`;
+            }
+            
+            if (title) {
+                preview += `<div style="color: #666; font-size: 0.9em;">${title}</div>`;
+            }
+            
+            if (company) {
+                preview += `<div style="color: #666; font-size: 0.9em;">${company}</div>`;
+            }
+            
+            if (phone || email) {
+                preview += '<div style="margin-top: 0.5rem;">';
+                if (phone) preview += `<div>📞 ${phone}</div>`;
+                if (email) preview += `<div>✉️ ${email}</div>`;
+                preview += '</div>';
+            }
+            
+            if (website) {
+                preview += `<div style="margin-top: 0.3rem;">🌐 <a href="${website}" style="color: #667eea; text-decoration: none;">${website}</a></div>`;
+            }
+            
+            if (additional) {
+                preview += `<div style="margin-top: 0.5rem; font-size: 0.85em; color: #777;">${additional}</div>`;
+            }
+            
+            if (!preview) {
+                preview = '<em style="color: #999;">Fill in the fields above to see your signature preview...</em>';
+            }
+            
+            document.getElementById('signature-preview').innerHTML = preview;
+        }
+        
+        // Load signature settings from server
+        async function loadSignatureSettings() {
+            try {
+                const response = await fetch('/api/settings/signature');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.signature) {
+                        const signature = data.signature;
+                        document.getElementById('signature-name').value = signature.name || '';
+                        document.getElementById('signature-title').value = signature.title || '';
+                        document.getElementById('signature-company').value = signature.company || '';
+                        document.getElementById('signature-phone').value = signature.phone || '';
+                        document.getElementById('signature-email').value = signature.email || '';
+                        document.getElementById('signature-website').value = signature.website || '';
+                        document.getElementById('signature-additional').value = signature.additional || '';
+                        document.getElementById('signature-enabled').checked = signature.enabled !== false;
+                        updateSignaturePreview();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading signature settings:', error);
+            }
+        }
+        
+        // Save signature settings to server
+        async function saveSignatureSettings() {
+            const signatureData = {
+                name: document.getElementById('signature-name').value.trim(),
+                title: document.getElementById('signature-title').value.trim(),
+                company: document.getElementById('signature-company').value.trim(),
+                phone: document.getElementById('signature-phone').value.trim(),
+                email: document.getElementById('signature-email').value.trim(),
+                website: document.getElementById('signature-website').value.trim(),
+                additional: document.getElementById('signature-additional').value.trim(),
+                enabled: document.getElementById('signature-enabled').checked
+            };
+            
+            try {
+                const response = await fetch('/api/settings/signature', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ signature: signatureData })
+                });
+                
+                if (response.ok) {
+                    showSuccess('settings-section', 'Email signature settings saved successfully! 📝');
+                } else {
+                    const errorData = await response.json();
+                    showError('settings-section', errorData.message || 'Failed to save signature settings');
+                }
+            } catch (error) {
+                console.error('Error saving signature settings:', error);
+                showError('settings-section', 'Failed to save signature settings');
+            }
+        }
+        
+        // Add event listeners for real-time preview updates
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add signature input listeners after a short delay to ensure elements exist
+            setTimeout(() => {
+                const signatureInputs = [
+                    'signature-name', 'signature-title', 'signature-company',
+                    'signature-phone', 'signature-email', 'signature-website', 'signature-additional'
+                ];
+                
+                signatureInputs.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.addEventListener('input', updateSignaturePreview);
+                    }
+                });
+                
+                // Load signature settings on page load
+                loadSignatureSettings();
+            }, 500);
+        });
+        
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
     // Enter key to submit forms (not just Ctrl/Cmd + Enter)
