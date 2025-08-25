@@ -104,34 +104,17 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
         // Get original email
         const originalEmail = await graphService.getEmailContent(emailId);
 
-        console.log('🔍 Fetching signature for user:', req.userEmail);
-
-        // Try to get signature (adjust this based on your actual UserSettings import)
-        let userSignature = null;
-        try {
-            const UserSettings = require('../models/UserSettings');
-            const userSettings = await UserSettings.findByUserEmail(req.userEmail, req.userTenant);
-            if (userSettings && userSettings.signature) {
-                userSignature = userSettings.signature;
-                console.log('✅ Found signature for user:', req.userEmail, userSignature);
-            } else {
-                console.log('📭 No signature found for user:', req.userEmail);
-            }
-        } catch (error) {
-            console.log('❌ Error getting signature:', error.message);
-        }
-        
-        // Get THIS USER's signature (not organization-wide)
+        // Get user's signature - USE ONLY ONE METHOD
         const userSignature = await getUserSignature(req.userEmail, req.userTenant);
         
         console.log(`🖊️ User signature ${userSignature && userSignature.enabled ? 'enabled' : 'disabled/not found'} for ${req.userEmail}`);
         
-        // Generate response with user's personal signature
+        // Generate response with signature
         const responseContent = await claudeService.generateEmailResponse(
             originalEmail, 
             context, 
             tone, 
-            userSignature
+            userSignature  // Pass signature to Claude
         );
         
         res.json({
