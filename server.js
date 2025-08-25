@@ -6,6 +6,7 @@ const session = require('express-session');
 const { initializeDatabase } = require('./src/config/initDatabase');
 const app = express();
 const settingsRoutes = require('./src/routes/settings');
+const emailRoutes = require('./src/routes/emails');
 const PORT = process.env.PORT || 3000;
 
  /**
@@ -87,6 +88,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
 app.use('/api/settings', settingsRoutes);
+app.use('/api/emails', emailRoutes);
 
 // Session middleware
 app.use(session({
@@ -365,68 +367,6 @@ app.get('/api/debug/graph', async (req, res) => {
         tokenLength: accessToken ? accessToken.length : 0,
         tokenStart: accessToken ? accessToken.substring(0, 20) + '...' : 'No token'
     });
-});
-
-// API Routes
-
-app.get('/api/emails', async (req, res) => {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    try {
-        const { days = 7 } = req.query; // Default to 7 days instead of 1
-        const graphClient = createGraphClient(accessToken);
-        
-        console.log('📧 Loading emails for the past', days, 'days');
-        
-        // Get current user info to filter out sent emails
-        const userProfile = await graphClient.api('/me').select('mail').get();
-        
-        // Calculate date range
-        const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-        
-        // Get emails from Inbox folder with increased limit
-        const emails = await graphClient
-            .api('/me/mailFolders/inbox/messages')
-            .filter(`receivedDateTime ge ${sinceDate.toISOString()}`)
-            .select('id,subject,from,sender,receivedDateTime,bodyPreview,isRead,importance,hasAttachments,parentFolderId')
-            .orderby('receivedDateTime desc')
-            .top(200) // Increased from 50 to 200
-            .get();
-        
-        // Additional filtering on the server side to ensure we only get received emails
-        const receivedEmails = emails.value.filter(email => {
-            // Make sure this email has a 'from' field and it's not from the user
-            const fromEmail = email.from?.emailAddress?.address || email.sender?.emailAddress?.address;
-            return fromEmail && fromEmail.toLowerCase() !== userProfile.mail?.toLowerCase();
-        });
-        
-        console.log('📊 Email loading results:', {
-            totalFound: emails.value.length,
-            filteredReceived: receivedEmails.length,
-            userEmail: userProfile.mail,
-            dateRange: `${sinceDate.toISOString()} to ${new Date().toISOString()}`
-        });
-        
-        res.json({
-            success: true,
-            count: receivedEmails.length,
-            emails: receivedEmails,
-            totalDays: parseInt(days),
-            dateRange: {
-                since: sinceDate.toISOString(),
-                until: new Date().toISOString()
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching emails:', error);
-        res.status(500).json({ 
-            error: 'Failed to fetch emails', 
-            message: error.message 
-        });
-    }
 });
 
 app.get('/api/calendar/events', async (req, res) => {
@@ -794,184 +734,7 @@ Provide a comprehensive response to the user's query. Be specific and actionable
     }
 });
 
-app.get('/api/emails/:emailId', async (req, res) => {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    try {
-        const { emailId } = req.params;
-        const graphClient = createGraphClient(accessToken);
-        
-        const email = await graphClient
-            .api(`/me/messages/${emailId}`)
-            .select('id,subject,from,sender,receivedDateTime,body,bodyPreview,replyTo,toRecipients,ccRecipients,importance,hasAttachments')
-            .get();
-        
-        res.json({
-            success: true,
-            email: email
-        });
-    } catch (error) {
-        console.error('Error fetching email content:', error);
-        res.status(500).json({ 
-            error: 'Failed to fetch email content', 
-            message: error.message,
-            details: error.response?.data || 'No additional details available'
-        });
-    }
-});
 
-app.post('/api/emails/:emailId/respond', async (req, res) => {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    try {
-        const { emailId } = req.params;
-        const { context = '', tone = 'professional' } = req.body;
-        
-        const graphClient = createGraphClient(accessToken);
-        const axios = require('axios');
-        
-        // Get original email content with correct field selection
-        const originalEmail = await graphClient
-            .api(`/me/messages/${emailId}`)
-            .select('id,subject,from,receivedDateTime,body,bodyPreview,sender,replyTo,toRecipients')
-            .get();
-        
-        console.log('Original email data:', JSON.stringify(originalEmail, null, 2)); // Debug log
-        
-        // Extract email content safely
-        const fromName = originalEmail.from?.emailAddress?.name || originalEmail.sender?.emailAddress?.name || 'Unknown Sender';
-        const fromEmail = originalEmail.from?.emailAddress?.address || originalEmail.sender?.emailAddress?.address || 'unknown@email.com';
-        const emailBody = originalEmail.body?.content || originalEmail.bodyPreview || 'No content available';
-        const subject = originalEmail.subject || 'No Subject';
-        
-        // Generate response using Claude
-        const prompt = `Generate a ${tone} email response to the following email:
-
-Original Email:
-From: ${fromName} <${fromEmail}>
-Subject: ${subject}
-Content: ${emailBody}
-
-Additional Context: ${context}
-
-Generate an appropriate response that:
-- Addresses the main points of the original email
-- Maintains a ${tone} tone
-- Is concise but complete
-- Includes a proper greeting and closing
-
-Return only the email content without subject line.`;
-
-        const claudeResponse = await axios.post('https://api.anthropic.com/v1/messages', {
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 800,
-            messages: [{ role: 'user', content: prompt }]
-        }, {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': process.env.ANTHROPIC_API_KEY,
-                'anthropic-version': '2023-06-01'
-            }
-        });
-        
-        res.json({
-            success: true,
-            originalSubject: subject,
-            originalFrom: fromName,
-            originalFromEmail: fromEmail,
-            generatedResponse: claudeResponse.data.content[0].text,
-            suggestedSubject: `Re: ${subject}`,
-            emailId: emailId
-        });
-        
-    } catch (error) {
-        console.error('Error generating email response:', error);
-        
-        // More detailed error logging
-        if (error.response && error.response.data) {
-            console.error('API Error Details:', error.response.data);
-        }
-        
-        res.status(500).json({ 
-            error: 'Failed to generate response', 
-            message: error.message,
-            details: error.response?.data || 'No additional details available'
-        });
-    }
-});
-
-app.post('/api/emails/:emailId/send', async (req, res) => {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    try {
-        const { emailId } = req.params;
-        const { responseContent, subject } = req.body;
-        
-        if (!responseContent) {
-            return res.status(400).json({ error: 'Response content is required' });
-        }
-        
-        const graphClient = createGraphClient(accessToken);
-        
-        // Get original email to get sender info with correct fields
-        const originalEmail = await graphClient
-            .api(`/me/messages/${emailId}`)
-            .select('from,sender,subject')
-            .get();
-        
-        // Extract recipient email safely
-        const recipientEmail = originalEmail.from?.emailAddress?.address || 
-                              originalEmail.sender?.emailAddress?.address;
-        
-        if (!recipientEmail) {
-            throw new Error('Could not determine recipient email address');
-        }
-        
-        const responseSubject = subject || `Re: ${originalEmail.subject || 'No Subject'}`;
-        
-        // Send the response
-        const message = {
-            subject: responseSubject,
-            body: {
-                contentType: 'HTML',
-                content: responseContent
-            },
-            toRecipients: [{
-                emailAddress: {
-                    address: recipientEmail
-                }
-            }]
-        };
-
-        await graphClient
-            .api('/me/sendMail')
-            .post({ message });
-        
-        res.json({
-            success: true,
-            message: 'Email response sent successfully',
-            recipient: recipientEmail,
-            subject: responseSubject
-        });
-        
-    } catch (error) {
-        console.error('Error sending email response:', error);
-        res.status(500).json({ 
-            error: 'Failed to send email response', 
-            message: error.message,
-            details: error.response?.data || 'No additional details available'
-        });
-    }
-});
 
 // Move selected emails to deleted items (soft delete)
 app.post('/api/emails/move-selected-to-trash', async (req, res) => {
