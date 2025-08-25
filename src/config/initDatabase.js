@@ -12,14 +12,17 @@ async function initializeDatabase() {
         // Import and sync models
         console.log('📋 Loading models...');
         const ClientOrganization = require('../models/ClientOrganization');
+        const UserSettings = require('../models/UserSettings'); 
         
         console.log('🔄 Synchronizing database tables...');
-        await sequelize.sync({ alter: false }); // Don't auto-alter tables in production
+        await sequelize.sync({ alter: false }); 
         console.log('✅ Database tables synchronized');
         
         // Check current data
         const orgCount = await ClientOrganization.count();
+        const userCount = await UserSettings.count(); // Add this line
         console.log(`📊 Current organizations in database: ${orgCount}`);
+        console.log(`👥 Current user settings in database: ${userCount}`); 
         
         console.log('✅ Database initialization complete');
         return true;
@@ -64,9 +67,20 @@ async function testDatabaseConnection() {
 async function getDatabaseStats() {
     try {
         const ClientOrganization = require('../models/ClientOrganization');
+        const UserSettings = require('../models/UserSettings'); 
         
         const totalOrgs = await ClientOrganization.count();
         const activeOrgs = await ClientOrganization.count({ where: { isActive: true } });
+        
+        // Add user statistics
+        const totalUsers = await UserSettings.count();
+        const activeUsers = await UserSettings.count({ where: { isActive: true } });
+        const usersWithSignatures = await UserSettings.count({ 
+            where: { 
+                isActive: true,
+                signature: { [sequelize.Op.ne]: {} } 
+            } 
+        });
 
         return {
             available: true,
@@ -75,6 +89,11 @@ async function getDatabaseStats() {
                 total: totalOrgs,
                 active: activeOrgs,
                 inactive: totalOrgs - activeOrgs
+            },
+            users: { // Add user statistics
+                total: totalUsers,
+                active: activeUsers,
+                withSignatures: usersWithSignatures
             },
             last_updated: new Date().toISOString()
         };
