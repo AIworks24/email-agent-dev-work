@@ -1,15 +1,49 @@
 const express = require('express');
 const MicrosoftGraphService = require('../services/microsoftGraph');
 const ClaudeAIService = require('../services/claudeAI');
+const UserSettings = require('../models/UserSettings');
 const router = express.Router();
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
-    if (!req.session.accessToken) {
+    if (!req.cookies.accessToken) {
         return res.status(401).json({ error: 'Authentication required' });
     }
+    
+    const userData = req.cookies.userData ? JSON.parse(req.cookies.userData) : null;
+    if (!userData || !userData.tenantId || !userData.username) {
+        return res.status(401).json({ error: 'Invalid authentication data' });
+    }
+    
+    req.session.accessToken = req.cookies.accessToken;
+    
+    // Extract user information
+    req.userEmail = userData.username; // This should be the email from Microsoft 365
+    req.userTenant = userData.tenantId;
+    req.userOrganization = userData.organizationName;
+    req.userName = userData.name;
+    
     next();
 };
+
+async function getUserSignature(userEmail, tenantId) {
+    try {
+        console.log(`🔍 Looking up signature for user: ${userEmail} in tenant: ${tenantId}`);
+        
+        const userSettings = await UserSettings.findByUserEmail(userEmail, tenantId);
+        
+        if (userSettings && userSettings.signature) {
+            console.log(`✅ Found signature for user: ${userEmail}`);
+            return userSettings.signature;
+        }
+        
+        console.log(`📭 No signature found for user: ${userEmail}`);
+        return null;
+    } catch (error) {
+        console.error('Error fetching user signature:', error);
+        return null;
+    }
+}
 
 // Get recent emails
 router.get('/', requireAuth, async (req, res) => {
@@ -89,11 +123,13 @@ router.post('/query', requireAuth, async (req, res) => {
     }
 });
 
-// Generate email response
 router.post('/:emailId/respond', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
         const { context = '', tone = 'professional' } = req.body;
+        
+        console.log(`📝 Generating email response for email ${emailId}`);
+        console.log(`👤 User: ${req.userEmail} (${req.userName}) in tenant: ${req.userTenant}`);
         
         const graphService = new MicrosoftGraphService(req.session.accessToken);
         const claudeService = new ClaudeAIService();
@@ -101,15 +137,29 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
         // Get original email
         const originalEmail = await graphService.getEmailContent(emailId);
         
-        // Generate response
-        const responseContent = await claudeService.generateEmailResponse(originalEmail, context, tone);
+        // Get THIS USER's signature settings (not organization-wide)
+        const userSignature = await getUserSignature(req.userEmail, req.userTenant);
+        
+        console.log(`🖊️ User signature ${userSignature && userSignature.enabled ? 'enabled' : 'disabled/not found'} for ${req.userEmail}`);
+        
+        // Generate response with user's personal signature
+        const responseContent = await claudeService.generateEmailResponse(
+            originalEmail, 
+            context, 
+            tone, 
+            userSignature
+        );
         
         res.json({
             success: true,
             originalSubject: originalEmail.subject,
+            originalFrom: `${originalEmail.from?.emailAddress?.name} <${originalEmail.from?.emailAddress?.address}>`,
             generatedResponse: responseContent,
-            suggestedSubject: `Re: ${originalEmail.subject}`
+            suggestedSubject: `Re: ${originalEmail.subject}`,
+            signatureIncluded: !!(userSignature && userSignature.enabled),
+            userEmail: req.userEmail
         });
+        
     } catch (error) {
         console.error('Error generating email response:', error);
         res.status(500).json({ 
@@ -118,6 +168,7 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
         });
     }
 });
+
 
 // Send email response
 router.post('/:emailId/send', requireAuth, async (req, res) => {
@@ -128,6 +179,9 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         if (!responseContent) {
             return res.status(400).json({ error: 'Response content is required' });
         }
+
+        console.log(`📧 Sending email response for ${emailId}`);
+        console.log(`👤 Sent by user: ${req.userEmail} (${req.userName})`);
         
         const graphService = new MicrosoftGraphService(req.session.accessToken);
         
@@ -143,13 +197,26 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
             responseContent,
             emailId
         );
+
+        console.log(`✅ Email sent successfully from ${req.userEmail} to ${recipientEmail}`);
+
+        try {
+            const userSettings = await UserSettings.findByUserEmail(req.userEmail, req.userTenant);
+            if (userSettings) {
+                await userSettings.updateLastActive();
+            }
+        } catch (updateError) {
+            console.warn('Could not update user last active time:', updateError.message);
+        }
         
         res.json({
             success: true,
             message: 'Email response sent successfully',
             recipient: recipientEmail,
-            subject: responseSubject
+            subject: responseSubject,
+            sentBy: req.userEmail
         });
+        
     } catch (error) {
         console.error('Error sending email response:', error);
         res.status(500).json({ 
