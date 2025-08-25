@@ -148,38 +148,30 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         
         console.log(`📧 Replying to email thread ${emailId}`);
         console.log(`👤 Sent by user: ${req.userEmail}`);
-        console.log(`🔗 Reply to all: ${replyToAll}`);
         
         const graphService = new MicrosoftGraphService(req.session.accessToken);
         
-        // Convert plain text to HTML for better formatting
-        const htmlContent = responseContent
-            .replace(/\n\n/g, '</p><p>')
+        // IMPROVED HTML conversion
+        let htmlContent = responseContent
+            .replace(/\n\n/g, '||PARAGRAPH||')
             .replace(/\n/g, '<br>')
-            .replace(/^(.*)$/, '<p>$1</p>')
-            .replace(/<p><\/p>/g, '');
+            .replace(/\|\|PARAGRAPH\|\|/g, '</p><p>');
 
-        await graphService.sendEmail(recipientEmail, subject, htmlContent);
+        if (!htmlContent.startsWith('<p>')) {
+            htmlContent = '<p>' + htmlContent;
+        }
+        if (!htmlContent.endsWith('</p>')) {
+            htmlContent = htmlContent + '</p>';
+        }
         
-        // CRITICAL: Use replyToEmail method to maintain threading
-        const result = await graphService.replyToEmail(
-            emailId,
-            htmlContent,
-            replyToAll
-        );
+        htmlContent = htmlContent.replace(/<p><\/p>/g, '');
+        
+        console.log('Converted HTML content:', htmlContent);
+        
+        // ONLY use replyToEmail (remove the sendEmail call)
+        const result = await graphService.replyToEmail(emailId, htmlContent, replyToAll);
         
         console.log(`✅ Email reply sent successfully by ${req.userEmail}`);
-        console.log(`🔗 Thread maintained: ${result.type}`);
-        
-        // Update user's last active time
-        try {
-            const userSettings = await UserSettings.findByUserEmail(req.userEmail, req.userTenant);
-            if (userSettings) {
-                await userSettings.update({ lastActiveAt: new Date() });
-            }
-        } catch (updateError) {
-            console.warn('Could not update user last active time:', updateError.message);
-        }
         
         res.json({
             success: true,
@@ -192,11 +184,9 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('Error sending email reply:', error);
-        console.error('Full error details:', error);
         res.status(500).json({ 
             error: 'Failed to send email reply',
-            message: error.message,
-            suggestion: 'Check that the original email ID is valid and you have permission to reply'
+            message: error.message
         });
     }
 });
