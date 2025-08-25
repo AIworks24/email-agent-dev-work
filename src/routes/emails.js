@@ -175,6 +175,8 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
             .replace(/\n/g, '<br>')
             .replace(/^(.*)$/, '<p>$1</p>')
             .replace(/<p><\/p>/g, '');
+
+        await graphService.sendEmail(recipientEmail, subject, htmlContent);
         
         // CRITICAL: Use replyToEmail method to maintain threading
         const result = await graphService.replyToEmail(
