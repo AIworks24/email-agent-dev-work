@@ -1,3 +1,5 @@
+// Update your src/services/microsoftGraph.js file:
+
 const { Client } = require('@microsoft/microsoft-graph-client');
 
 class TokenAuthProvider {
@@ -50,7 +52,7 @@ class MicrosoftGraphService {
         try {
             const email = await this.graphClient
                 .api(`/me/messages/${emailId}`)
-                .select('id,subject,from,to,receivedDateTime,body,attachments,replyTo')
+                .select('id,subject,from,to,receivedDateTime,body,attachments,replyTo,conversationId')
                 .get();
             
             return email;
@@ -60,34 +62,101 @@ class MicrosoftGraphService {
         }
     }
 
-    async sendEmail(to, subject, body, replyToId = null) {
-        const message = {
-            subject: subject,
-            body: {
-                contentType: 'HTML',
-                content: body
-            },
-            toRecipients: [{
-                emailAddress: {
-                    address: to
-                }
-            }]
-        };
-
+    // UPDATED: Fixed sendEmail method to properly handle replies
+    async sendEmail(to, subject, body, replyToEmailId = null) {
         try {
-            if (replyToId) {
-                await this.graphClient
-                    .api(`/me/messages/${replyToId}/reply`)
-                    .post({ message });
+            if (replyToEmailId) {
+                // THIS IS THE KEY: Use the reply API to maintain threading
+                console.log(`📧 Replying to email thread: ${replyToEmailId}`);
+                
+                const replyMessage = {
+                    message: {
+                        body: {
+                            contentType: 'HTML',
+                            content: body
+                        }
+                    },
+                    comment: "" // Optional comment for the reply
+                };
+
+                const result = await this.graphClient
+                    .api(`/me/messages/${replyToEmailId}/reply`)
+                    .post(replyMessage);
+                
+                console.log('✅ Reply sent successfully in thread');
+                return { 
+                    success: true, 
+                    message: 'Reply sent in thread successfully',
+                    id: result.id,
+                    type: 'reply'
+                };
             } else {
-                await this.graphClient
+                // Send a new email (not a reply)
+                console.log('📧 Sending new email (not a reply)');
+                
+                const message = {
+                    subject: subject,
+                    body: {
+                        contentType: 'HTML',
+                        content: body
+                    },
+                    toRecipients: [{
+                        emailAddress: {
+                            address: to
+                        }
+                    }]
+                };
+
+                const result = await this.graphClient
                     .api('/me/sendMail')
                     .post({ message });
+                
+                console.log('✅ New email sent successfully');
+                return { 
+                    success: true, 
+                    message: 'New email sent successfully',
+                    id: result.id,
+                    type: 'new'
+                };
             }
             
-            return { success: true, message: 'Email sent successfully' };
         } catch (error) {
             console.error('Error sending email:', error);
+            console.error('Error details:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    // NEW: Method to reply to email with all recipients
+    async replyToEmail(emailId, body, replyToAll = false) {
+        try {
+            console.log(`📧 ${replyToAll ? 'Replying to all' : 'Replying'} to email: ${emailId}`);
+            
+            const replyMessage = {
+                message: {
+                    body: {
+                        contentType: 'HTML',
+                        content: body
+                    }
+                }
+            };
+
+            const endpoint = replyToAll ? 'replyAll' : 'reply';
+            const result = await this.graphClient
+                .api(`/me/messages/${emailId}/${endpoint}`)
+                .post(replyMessage);
+            
+            console.log(`✅ ${replyToAll ? 'Reply all' : 'Reply'} sent successfully`);
+            return { 
+                success: true, 
+                message: `${replyToAll ? 'Reply all' : 'Reply'} sent successfully`,
+                id: result.id,
+                type: replyToAll ? 'reply-all' : 'reply'
+            };
+            
+        } catch (error) {
+            console.error('Error replying to email:', error);
+            console.error('Error details:', error.response?.data || error.message);
             throw error;
         }
     }
