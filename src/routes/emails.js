@@ -17,7 +17,7 @@ const requireAuth = (req, res, next) => {
         return res.status(401).json({ error: 'Invalid authentication data' });
     }
     
-    req.session.accessToken = req.cookies.accessToken;
+    req.accessToken = req.cookies.accessToken;
     
     // Extract user information for signature lookup
     req.userEmail = userData.username;
