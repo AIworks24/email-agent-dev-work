@@ -167,13 +167,18 @@ ${this.formatCalendarForPrompt(calendarData)}`;
         }).join('\n\n');
     }
 
-    async generateEmailResponse(originalEmail, context = '', tone = 'professional') {
-        // Include current time context
-        const timeContext = this.getCurrentTimeContext();
-
-        const signature = userSignature ? this.formatSignature(userSignature) : '';
-        
-        const prompt = `${timeContext}
+    async generateEmailResponse(originalEmail, context = '', tone = 'professional', userSignature = null) {
+    const timeContext = this.getCurrentTimeContext();
+    
+    // Format signature if provided
+    const signature = userSignature ? this.formatSignature(userSignature) : '';
+    
+    console.log('🖊️ Signature to include:', signature ? 'YES' : 'NO');
+    if (signature) {
+        console.log('Signature content:', signature);
+    }
+    
+    const prompt = `${timeContext}
 
 Generate a ${tone} email response to the following email:
 
@@ -188,42 +193,42 @@ Generate an appropriate response that:
 - Addresses the main points of the original email
 - Maintains a ${tone} tone
 - Is concise but complete
-- Includes a proper greeting and closing
+- Includes a proper greeting
 - If scheduling is mentioned, reference Eastern Time
-- ${signature ? 'Ends with the provided signature' : 'Includes an appropriate closing'}
+- ${signature ? 'Must end with the provided signature exactly as shown' : 'Includes an appropriate closing with just the first name'}
 
-${signature ? `User's Signature to include at the end:
+${signature ? `IMPORTANT: You must include this exact signature at the end:
 ${signature}` : ''}
 
 Return only the email content without subject line.`;
 
-        try {
-            const response = await axios.post(this.baseURL, {
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 800,
-                messages: [
-                    { role: 'user', content: prompt }
-                ]
-            }, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': this.apiKey,
-                    'anthropic-version': '2023-06-01'
-                }
-            });
-
-             let generatedResponse = response.data.content[0].text;
-            
-            // If signature wasn't properly included by Claude, append it manually
-            if (signature && !generatedResponse.includes(signature.substring(0, 20))) {
-                generatedResponse += signature;
+    try {
+        const response = await axios.post(this.baseURL, {
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1000,
+            messages: [
+                { role: 'user', content: prompt }
+            ]
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': this.apiKey,
+                'anthropic-version': '2023-06-01'
             }
+        });
 
-            return generatedResponse;
-        } catch (error) {
-            console.error('Error generating email response:', error.response?.data || error.message);
-            throw new Error('Failed to generate email response');
+        let generatedResponse = response.data.content[0].text;
+        
+        // If signature wasn't properly included by Claude, append it manually
+        if (signature && !generatedResponse.includes(signature.trim().split('\n')[1])) {
+            console.log('🔧 Manually appending signature');
+            generatedResponse += signature;
         }
+
+        return generatedResponse;
+    } catch (error) {
+        console.error('Error generating email response:', error.response?.data || error.message);
+        throw new Error('Failed to generate email response');
     }
 }
 
