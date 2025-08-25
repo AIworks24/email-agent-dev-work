@@ -103,6 +103,23 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
         
         // Get original email
         const originalEmail = await graphService.getEmailContent(emailId);
+
+        console.log('🔍 Fetching signature for user:', req.userEmail);
+
+        // Try to get signature (adjust this based on your actual UserSettings import)
+        let userSignature = null;
+        try {
+            const UserSettings = require('../models/UserSettings');
+            const userSettings = await UserSettings.findByUserEmail(req.userEmail, req.userTenant);
+            if (userSettings && userSettings.signature) {
+                userSignature = userSettings.signature;
+                console.log('✅ Found signature for user:', req.userEmail, userSignature);
+            } else {
+                console.log('📭 No signature found for user:', req.userEmail);
+            }
+        } catch (error) {
+            console.log('❌ Error getting signature:', error.message);
+        }
         
         // Get THIS USER's signature (not organization-wide)
         const userSignature = await getUserSignature(req.userEmail, req.userTenant);
