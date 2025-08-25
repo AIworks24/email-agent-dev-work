@@ -8,6 +8,7 @@ const app = express();
 const settingsRoutes = require('./src/routes/settings');
 const PORT = process.env.PORT || 3000;
 
+ /**
  * Helper function to determine if we're in Daylight Saving Time
  */
 function isInDST(date = new Date()) {
