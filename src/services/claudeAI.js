@@ -23,6 +23,42 @@ class ClaudeAIService {
         
         return `Current time: ${estTime}`;
     }
+    // Helper method to format signature
+    formatSignature(signature) {
+        if (!signature || !signature.enabled) {
+            return '';
+        }
+
+        let signatureText = '\n\nThank you,\n';
+        
+        if (signature.name) {
+            signatureText += `${signature.name}\n`;
+        }
+        
+        if (signature.title) {
+            signatureText += `${signature.title}\n`;
+        }
+        
+        if (signature.company) {
+            signatureText += `${signature.company}\n`;
+        }
+        
+        // Add contact information
+        const contactInfo = [];
+        if (signature.phone) contactInfo.push(`Phone: ${signature.phone}`);
+        if (signature.email) contactInfo.push(`Email: ${signature.email}`);
+        if (signature.website) contactInfo.push(`Website: ${signature.website}`);
+        
+        if (contactInfo.length > 0) {
+            signatureText += contactInfo.join(' | ') + '\n';
+        }
+        
+        if (signature.additional) {
+            signatureText += `${signature.additional}\n`;
+        }
+        
+        return signatureText;
+    }
 
     async processEmailQuery(query, emailData, calendarData = null) {
         const prompt = this.buildEmailQueryPrompt(query, emailData, calendarData);
@@ -134,6 +170,8 @@ ${this.formatCalendarForPrompt(calendarData)}`;
     async generateEmailResponse(originalEmail, context = '', tone = 'professional') {
         // Include current time context
         const timeContext = this.getCurrentTimeContext();
+
+        const signature = userSignature ? this.formatSignature(userSignature) : '';
         
         const prompt = `${timeContext}
 
@@ -152,6 +190,10 @@ Generate an appropriate response that:
 - Is concise but complete
 - Includes a proper greeting and closing
 - If scheduling is mentioned, reference Eastern Time
+- ${signature ? 'Ends with the provided signature' : 'Includes an appropriate closing'}
+
+${signature ? `User's Signature to include at the end:
+${signature}` : ''}
 
 Return only the email content without subject line.`;
 
@@ -170,7 +212,14 @@ Return only the email content without subject line.`;
                 }
             });
 
-            return response.data.content[0].text;
+             let generatedResponse = response.data.content[0].text;
+            
+            // If signature wasn't properly included by Claude, append it manually
+            if (signature && !generatedResponse.includes(signature.substring(0, 20))) {
+                generatedResponse += signature;
+            }
+
+            return generatedResponse;
         } catch (error) {
             console.error('Error generating email response:', error.response?.data || error.message);
             throw new Error('Failed to generate email response');
