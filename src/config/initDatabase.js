@@ -1,4 +1,9 @@
 const { sequelize, isConnected } = require('./database');
+const UserSettings = require('../models/UserSettings');
+
+// After syncing, add:
+const userCount = await UserSettings.count();
+console.log(`👥 Current user settings in database: ${userCount}`);
 
 async function initializeDatabase() {
     try {
