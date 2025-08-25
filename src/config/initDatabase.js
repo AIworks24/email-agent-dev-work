@@ -1,9 +1,6 @@
-const { sequelize, isConnected } = require('./database');
-const UserSettings = require('../models/UserSettings');
+// Fix your src/config/initDatabase.js file:
 
-// After syncing, add:
-const userCount = await UserSettings.count();
-console.log(`👥 Current user settings in database: ${userCount}`);
+const { sequelize, isConnected } = require('./database');
 
 async function initializeDatabase() {
     try {
@@ -17,17 +14,17 @@ async function initializeDatabase() {
         // Import and sync models
         console.log('📋 Loading models...');
         const ClientOrganization = require('../models/ClientOrganization');
-        const UserSettings = require('../models/UserSettings'); 
+        const UserSettings = require('../models/UserSettings'); // Add this line
         
         console.log('🔄 Synchronizing database tables...');
-        await sequelize.sync({ alter: false }); 
+        await sequelize.sync({ alter: false }); // Don't auto-alter tables in production
         console.log('✅ Database tables synchronized');
         
-        // Check current data
+        // Check current data - MOVE THESE INSIDE THE ASYNC FUNCTION
         const orgCount = await ClientOrganization.count();
-        const userCount = await UserSettings.count(); // Add this line
+        const userCount = await UserSettings.count(); // This line needs to be inside an async function
         console.log(`📊 Current organizations in database: ${orgCount}`);
-        console.log(`👥 Current user settings in database: ${userCount}`); 
+        console.log(`👥 Current user settings in database: ${userCount}`);
         
         console.log('✅ Database initialization complete');
         return true;
@@ -72,12 +69,12 @@ async function testDatabaseConnection() {
 async function getDatabaseStats() {
     try {
         const ClientOrganization = require('../models/ClientOrganization');
-        const UserSettings = require('../models/UserSettings'); 
+        const UserSettings = require('../models/UserSettings'); // Add this line
         
         const totalOrgs = await ClientOrganization.count();
         const activeOrgs = await ClientOrganization.count({ where: { isActive: true } });
         
-        // Add user statistics
+        // Add user statistics - INSIDE THE ASYNC FUNCTION
         const totalUsers = await UserSettings.count();
         const activeUsers = await UserSettings.count({ where: { isActive: true } });
         const usersWithSignatures = await UserSettings.count({ 
