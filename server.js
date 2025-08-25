@@ -5,10 +5,9 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const { initializeDatabase } = require('./src/config/initDatabase');
 const app = express();
+const settingsRoutes = require('./src/routes/settings');
 const PORT = process.env.PORT || 3000;
 
-// MOVE THESE FUNCTIONS OUTSIDE THE DATABASE CALLBACK
-/**
  * Helper function to determine if we're in Daylight Saving Time
  */
 function isInDST(date = new Date()) {
@@ -86,6 +85,7 @@ initializeDatabase().then(success => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
+app.use('/api/settings', settingsRoutes);
 
 // Session middleware
 app.use(session({
