@@ -726,6 +726,187 @@
                 font-style: italic;
                 font-weight: 500;
             }
+
+            /* Signature Settings Specific Styles */
+            .signature-settings {
+                background: #f8f9ff;
+                border: 1px solid #e1e5e9;
+                border-radius: 12px;
+                padding: 1.5rem;
+                margin: 1rem 0;
+            }
+            
+            .signature-preview {
+                background: white;
+                border: 2px solid #e1e5e9;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+                font-family: Arial, sans-serif;
+                font-size: 0.9rem;
+                line-height: 1.5;
+                min-height: 120px;
+                position: relative;
+            }
+            
+            .signature-preview::before {
+                content: "Email Signature Preview";
+                position: absolute;
+                top: -10px;
+                left: 15px;
+                background: white;
+                padding: 0 8px;
+                font-size: 0.75rem;
+                color: #667eea;
+                font-weight: 600;
+            }
+            
+            .signature-preview.empty {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #999;
+                font-style: italic;
+            }
+            
+            /* Form styling for signature inputs */
+            .form-input, .form-textarea {
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #e1e5e9;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+            
+            .form-input:focus, .form-textarea:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+            
+            .form-group {
+                margin-bottom: 1rem;
+            }
+            
+            .form-label {
+                display: block;
+                margin-bottom: 0.5rem;
+                font-weight: 500;
+                color: #333;
+                font-size: 0.9rem;
+            }
+            
+            /* Checkbox styling */
+            .signature-checkbox {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.75rem;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border: 1px solid #e1e5e9;
+                margin: 1rem 0;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+            }
+            
+            .signature-checkbox:hover {
+                background: #e9ecef;
+            }
+            
+            .signature-checkbox input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+            }
+            
+            /* Success message for signature */
+            .signature-success {
+                background: #d4edda;
+                color: #155724;
+                padding: 0.75rem 1rem;
+                border-radius: 8px;
+                border: 1px solid #c3e6cb;
+                margin: 1rem 0;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            /* Settings section headers */
+            .settings-section-header {
+                border-bottom: 2px solid #667eea;
+                padding-bottom: 0.5rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .settings-section-header h3 {
+                color: #667eea;
+                margin: 0;
+                font-size: 1.1rem;
+                font-weight: 600;
+            }
+            
+            .settings-section-header p {
+                color: #666;
+                margin: 0.5rem 0 0 0;
+                font-size: 0.85rem;
+                line-height: 1.4;
+            }
+            
+            /* Responsive adjustments for signature settings */
+            @media (max-width: 768px) {
+                .signature-settings {
+                    padding: 1rem;
+                    margin: 0.5rem 0;
+                }
+                
+                .signature-preview {
+                    padding: 0.75rem;
+                    font-size: 0.85rem;
+                }
+                
+                .form-input, .form-textarea {
+                    padding: 0.6rem;
+                    font-size: 0.85rem;
+                }
+            }
+            
+            /* Animation for signature preview updates */
+            .signature-preview-updating {
+                opacity: 0.7;
+                transform: scale(0.98);
+                transition: opacity 0.2s ease, transform 0.2s ease;
+            }
+            
+            /* Signature field icons */
+            .signature-field-icon {
+                display: inline-block;
+                width: 20px;
+                margin-right: 0.5rem;
+                text-align: center;
+            }
+            
+            /* Save button enhancement for signature */
+            .btn-save-signature {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .btn-save-signature:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            }
         }
 
                 /* Enhanced Dark mode support */
