@@ -231,5 +231,6 @@ Return only the email content without subject line.`;
         throw new Error('Failed to generate email response');
     }
 }
+}
 
 module.exports = ClaudeAIService;
