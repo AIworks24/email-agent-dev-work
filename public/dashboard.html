@@ -1260,15 +1260,17 @@
                 <div id="response-preview" style="display: none;">
                     <h3 style="margin-bottom: 1rem;">Generated Response</h3>
                     <div id="response-content" class="response-area"></div>
-                    <div style="display: flex; gap: 1rem;">
-                        <button class="btn btn-success" onclick="sendResponse()">
+                   <div id="send-buttons" style="display: none; margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="sendResponse(false)" style="margin-right: 1rem;">
                             <span>📤</span>
-                            Send Response
+                            Send Reply
                         </button>
-                        <button class="btn btn-outline" onclick="editResponse()">
-                            Edit
+                        <button class="btn btn-outline" onclick="sendResponse(true)">
+                            <span>📧</span>
+                            Reply to All
                         </button>
-                        <button class="btn btn-secondary" onclick="cancelResponse()">
+                        <button class="btn btn-outline" onclick="document.getElementById('response-preview').style.display='none'; document.getElementById('send-buttons').style.display='none';" 
+                                style="margin-left: 1rem; background: #f8f9fa; color: #666;">
                             Cancel
                         </button>
                     </div>
