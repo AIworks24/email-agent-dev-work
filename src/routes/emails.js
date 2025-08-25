@@ -1,10 +1,12 @@
+// Update your src/routes/emails.js - CRITICAL FIXES for email threading
+
 const express = require('express');
 const MicrosoftGraphService = require('../services/microsoftGraph');
 const ClaudeAIService = require('../services/claudeAI');
-const UserSettings = require('../models/UserSettings');
+const UserSettings = require('../models/UserSettings'); // Make sure this is added
 const router = express.Router();
 
-// Middleware to check authentication
+// Updated authentication middleware to extract user data
 const requireAuth = (req, res, next) => {
     if (!req.cookies.accessToken) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -17,8 +19,8 @@ const requireAuth = (req, res, next) => {
     
     req.session.accessToken = req.cookies.accessToken;
     
-    // Extract user information
-    req.userEmail = userData.username; // This should be the email from Microsoft 365
+    // Extract user information for signature lookup
+    req.userEmail = userData.username;
     req.userTenant = userData.tenantId;
     req.userOrganization = userData.organizationName;
     req.userName = userData.name;
@@ -26,14 +28,15 @@ const requireAuth = (req, res, next) => {
     next();
 };
 
+// Helper function to get user's signature
 async function getUserSignature(userEmail, tenantId) {
     try {
-        console.log(`🔍 Looking up signature for user: ${userEmail} in tenant: ${tenantId}`);
+        console.log(`🔍 Looking up signature for user: ${userEmail}`);
         
         const userSettings = await UserSettings.findByUserEmail(userEmail, tenantId);
         
         if (userSettings && userSettings.signature) {
-            console.log(`✅ Found signature for user: ${userEmail}`);
+            console.log(`✅ Found signature for user: ${userEmail}`, userSettings.signature);
             return userSettings.signature;
         }
         
@@ -45,7 +48,7 @@ async function getUserSignature(userEmail, tenantId) {
     }
 }
 
-// Get recent emails
+// Get recent emails (existing code - no changes)
 router.get('/', requireAuth, async (req, res) => {
     try {
         const { days = 1 } = req.query;
@@ -66,7 +69,7 @@ router.get('/', requireAuth, async (req, res) => {
     }
 });
 
-// Get specific email content
+// Get specific email content (existing code - no changes)
 router.get('/:emailId', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
@@ -86,50 +89,14 @@ router.get('/:emailId', requireAuth, async (req, res) => {
     }
 });
 
-// Process email query with AI
-router.post('/query', requireAuth, async (req, res) => {
-    try {
-        const { query, includeDays = 1 } = req.body;
-        
-        if (!query) {
-            return res.status(400).json({ error: 'Query is required' });
-        }
-
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
-        const claudeService = new ClaudeAIService();
-        
-        // Get recent emails and calendar data
-        const [emails, calendarEvents] = await Promise.all([
-            graphService.getRecentEmails(includeDays),
-            graphService.getCalendarEvents(7).catch(() => []) // Don't fail if calendar fails
-        ]);
-        
-        // Process with Claude AI
-        const response = await claudeService.processEmailQuery(query, emails, calendarEvents);
-        
-        res.json({
-            success: true,
-            query: query,
-            response: response,
-            emailCount: emails.length,
-            calendarEventCount: calendarEvents.length
-        });
-    } catch (error) {
-        console.error('Error processing email query:', error);
-        res.status(500).json({ 
-            error: 'Failed to process query',
-            message: error.message 
-        });
-    }
-});
-
+// Generate email response - UPDATED WITH SIGNATURE SUPPORT
 router.post('/:emailId/respond', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
         const { context = '', tone = 'professional' } = req.body;
         
         console.log(`📝 Generating email response for email ${emailId}`);
-        console.log(`👤 User: ${req.userEmail} (${req.userName}) in tenant: ${req.userTenant}`);
+        console.log(`👤 User: ${req.userEmail} in tenant: ${req.userTenant}`);
         
         const graphService = new MicrosoftGraphService(req.session.accessToken);
         const claudeService = new ClaudeAIService();
@@ -137,7 +104,7 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
         // Get original email
         const originalEmail = await graphService.getEmailContent(emailId);
         
-        // Get THIS USER's signature settings (not organization-wide)
+        // Get THIS USER's signature (not organization-wide)
         const userSignature = await getUserSignature(req.userEmail, req.userTenant);
         
         console.log(`🖊️ User signature ${userSignature && userSignature.enabled ? 'enabled' : 'disabled/not found'} for ${req.userEmail}`);
@@ -169,41 +136,44 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
     }
 });
 
-
-// Send email response
+// CRITICAL FIX: Send email response as REPLY to maintain threading
 router.post('/:emailId/send', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
-        const { responseContent, subject } = req.body;
+        const { responseContent, subject, replyToAll = false } = req.body;
         
         if (!responseContent) {
             return res.status(400).json({ error: 'Response content is required' });
         }
-
-        console.log(`📧 Sending email response for ${emailId}`);
-        console.log(`👤 Sent by user: ${req.userEmail} (${req.userName})`);
+        
+        console.log(`📧 Replying to email thread ${emailId}`);
+        console.log(`👤 Sent by user: ${req.userEmail}`);
+        console.log(`🔗 Reply to all: ${replyToAll}`);
         
         const graphService = new MicrosoftGraphService(req.session.accessToken);
         
-        // Get original email to get sender info
-        const originalEmail = await graphService.getEmailContent(emailId);
-        const recipientEmail = originalEmail.from.emailAddress.address;
-        const responseSubject = subject || `Re: ${originalEmail.subject}`;
+        // Convert plain text to HTML for better formatting
+        const htmlContent = responseContent
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+            .replace(/^(.*)$/, '<p>$1</p>')
+            .replace(/<p><\/p>/g, '');
         
-        // Send the response
-        const result = await graphService.sendEmail(
-            recipientEmail,
-            responseSubject,
-            responseContent,
-            emailId
+        // CRITICAL: Use replyToEmail method to maintain threading
+        const result = await graphService.replyToEmail(
+            emailId,
+            htmlContent,
+            replyToAll
         );
-
-        console.log(`✅ Email sent successfully from ${req.userEmail} to ${recipientEmail}`);
-
+        
+        console.log(`✅ Email reply sent successfully by ${req.userEmail}`);
+        console.log(`🔗 Thread maintained: ${result.type}`);
+        
+        // Update user's last active time
         try {
             const userSettings = await UserSettings.findByUserEmail(req.userEmail, req.userTenant);
             if (userSettings) {
-                await userSettings.updateLastActive();
+                await userSettings.update({ lastActiveAt: new Date() });
             }
         } catch (updateError) {
             console.warn('Could not update user last active time:', updateError.message);
@@ -211,68 +181,116 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         
         res.json({
             success: true,
-            message: 'Email response sent successfully',
-            recipient: recipientEmail,
-            subject: responseSubject,
-            sentBy: req.userEmail
+            message: 'Email reply sent successfully - thread maintained',
+            messageId: result.id,
+            replyType: result.type,
+            sentBy: req.userEmail,
+            threadMaintained: true
         });
         
     } catch (error) {
-        console.error('Error sending email response:', error);
+        console.error('Error sending email reply:', error);
+        console.error('Full error details:', error);
         res.status(500).json({ 
-            error: 'Failed to send email response',
-            message: error.message 
+            error: 'Failed to send email reply',
+            message: error.message,
+            suggestion: 'Check that the original email ID is valid and you have permission to reply'
         });
     }
 });
 
-// Mark email as read
-router.patch('/:emailId/read', requireAuth, async (req, res) => {
+// NEW: Endpoint to send reply to all
+router.post('/:emailId/reply-all', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
+        const { responseContent } = req.body;
+        
+        if (!responseContent) {
+            return res.status(400).json({ error: 'Response content is required' });
+        }
+        
+        console.log(`📧 Replying to ALL on email thread ${emailId}`);
+        console.log(`👤 Sent by user: ${req.userEmail}`);
+        
         const graphService = new MicrosoftGraphService(req.session.accessToken);
         
-        const result = await graphService.markEmailAsRead(emailId);
+        // Get user signature
+        const userSignature = await getUserSignature(req.userEmail, req.userTenant);
         
-        res.json(result);
-    } catch (error) {
-        console.error('Error marking email as read:', error);
-        res.status(500).json({ 
-            error: 'Failed to mark email as read',
-            message: error.message 
-        });
-    }
-});
-
-// Email summary endpoint
-router.get('/summary/daily', requireAuth, async (req, res) => {
-    try {
-        const { days = 1 } = req.query;
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
-        const claudeService = new ClaudeAIService();
+        // Add signature if enabled
+        let finalContent = responseContent;
+        if (userSignature && userSignature.enabled) {
+            const claudeService = new ClaudeAIService();
+            const signature = claudeService.formatSignature ? claudeService.formatSignature(userSignature) : '';
+            if (signature) {
+                finalContent += signature;
+            }
+        }
         
-        const emails = await graphService.getRecentEmails(parseInt(days));
+        // Convert to HTML
+        const htmlContent = finalContent
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+            .replace(/^(.*)$/, '<p>$1</p>')
+            .replace(/<p><\/p>/g, '');
         
-        const summaryQuery = `Provide a summary of these emails including:
-        1. Total number of emails
-        2. Number of unread emails
-        3. Most important emails (by sender or content)
-        4. Any action items or follow-ups needed
-        5. Quick overview of main topics/themes`;
+        // Reply to all
+        const result = await graphService.replyToEmail(
+            emailId,
+            htmlContent,
+            true // replyToAll = true
+        );
         
-        const summary = await claudeService.processEmailQuery(summaryQuery, emails);
+        console.log(`✅ Reply to all sent successfully by ${req.userEmail}`);
         
         res.json({
             success: true,
-            period: `${days} day(s)`,
-            totalEmails: emails.length,
-            unreadEmails: emails.filter(e => !e.isRead).length,
-            summary: summary
+            message: 'Reply to all sent successfully - thread maintained',
+            messageId: result.id,
+            replyType: result.type,
+            sentBy: req.userEmail,
+            threadMaintained: true
+        });
+        
+    } catch (error) {
+        console.error('Error sending reply to all:', error);
+        res.status(500).json({ 
+            error: 'Failed to send reply to all',
+            message: error.message
+        });
+    }
+});
+
+// Process email query with AI (existing code - keep unchanged)
+router.post('/query', requireAuth, async (req, res) => {
+    try {
+        const { query, includeDays = 1 } = req.body;
+        
+        if (!query) {
+            return res.status(400).json({ error: 'Query is required' });
+        }
+
+        const graphService = new MicrosoftGraphService(req.session.accessToken);
+        const claudeService = new ClaudeAIService();
+        
+        const [emails, calendarEvents] = await Promise.all([
+            graphService.getRecentEmails(includeDays),
+            graphService.getCalendarEvents(7).catch(() => [])
+        ]);
+        
+        const response = await claudeService.processEmailQuery(query, emails, calendarEvents);
+        
+        res.json({
+            success: true,
+            query: query,
+            response: response,
+            emailCount: emails.length,
+            calendarEventCount: calendarEvents.length
         });
     } catch (error) {
-        console.error('Error generating email summary:', error);
+        console.error('Error processing email query:', error);
         res.status(500).json({ 
-            error: 'Failed to generate email summary',
+            error: 'Failed to process query',
             message: error.message 
         });
     }
