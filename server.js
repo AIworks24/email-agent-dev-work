@@ -83,14 +83,10 @@ initializeDatabase().then(success => {
     }
 });
 
-// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
-app.use('/api/settings', settingsRoutes);
-app.use('/api/emails', emailRoutes);
 
-// Session middleware
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-session-secret',
     resave: true,
@@ -101,6 +97,10 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
+
+
+app.use('/api/settings', settingsRoutes);
+app.use('/api/emails', emailRoutes);
 
 function createGraphClient(accessToken) {
     const { Client } = require('@microsoft/microsoft-graph-client');
