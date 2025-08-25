@@ -52,7 +52,7 @@ async function getUserSignature(userEmail, tenantId) {
 router.get('/', requireAuth, async (req, res) => {
     try {
         const { days = 1 } = req.query;
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
+        const graphService = new MicrosoftGraphService(req.accessToken);
         const emails = await graphService.getRecentEmails(parseInt(days));
         
         res.json({
@@ -73,7 +73,7 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:emailId', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
+        const graphService = new MicrosoftGraphService(req.accessToken);
         const email = await graphService.getEmailContent(emailId);
         
         res.json({
@@ -98,7 +98,7 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
         console.log(`📝 Generating email response for email ${emailId}`);
         console.log(`👤 User: ${req.userEmail} in tenant: ${req.userTenant}`);
         
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
+        const graphService = new MicrosoftGraphService(req.accessToken);
         const claudeService = new ClaudeAIService();
         
         // Get original email
@@ -149,7 +149,7 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         console.log(`📧 Replying to email thread ${emailId}`);
         console.log(`👤 Sent by user: ${req.userEmail}`);
         
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
+        const graphService = new MicrosoftGraphService(req.accessToken);
         
         // IMPROVED HTML conversion
         let htmlContent = responseContent
@@ -204,7 +204,7 @@ router.post('/:emailId/reply-all', requireAuth, async (req, res) => {
         console.log(`📧 Replying to ALL on email thread ${emailId}`);
         console.log(`👤 Sent by user: ${req.userEmail}`);
         
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
+        const graphService = new MicrosoftGraphService(req.accessToken);
         
         // Get user signature
         const userSignature = await getUserSignature(req.userEmail, req.userTenant);
@@ -262,7 +262,7 @@ router.post('/query', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Query is required' });
         }
 
-        const graphService = new MicrosoftGraphService(req.session.accessToken);
+        const graphService = new MicrosoftGraphService(req.accessToken);
         const claudeService = new ClaudeAIService();
         
         const [emails, calendarEvents] = await Promise.all([
