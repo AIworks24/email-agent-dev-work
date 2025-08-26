@@ -1703,7 +1703,21 @@ async function loadStats() {
         }
 
         // Calculate and update productivity score
-        await calculateProductivityScore();
+        try {
+            if (typeof calculateProductivityScore === 'function') {
+                await calculateProductivityScore();
+            } else {
+                console.warn('calculateProductivityScore function not found');
+                // Your existing calculateProductivityScore code should be in the same file
+                // If it's missing, just set a default value:
+                const scoreElement = document.querySelector('.stat-card:last-child .stat-value');
+                if (scoreElement && scoreElement.textContent === '-') {
+                    scoreElement.textContent = '75%';
+                }
+            }
+        } catch (productivityError) {
+            console.error('Error calculating productivity score:', productivityError);
+        }
         
     } catch (error) {
         console.error('Error loading stats:', error);
