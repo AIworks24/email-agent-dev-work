@@ -1,5 +1,3 @@
-// UPDATED src/routes/emails.js - Replace your existing email routes
-
 const express = require('express');
 const MicrosoftGraphService = require('../services/microsoftGraph');
 const ClaudeAIService = require('../services/claudeAI');
@@ -48,7 +46,7 @@ async function getUserSignature(userEmail, tenantId) {
     }
 }
 
-// FIXED: Get recent emails with proper error handling
+// Get recent emails
 router.get('/', requireAuth, async (req, res) => {
     try {
         const { days = 1 } = req.query;
@@ -59,7 +57,6 @@ router.get('/', requireAuth, async (req, res) => {
         
         console.log(`✅ Successfully loaded ${emails.length} emails`);
         
-        // Return proper success response
         res.json({
             success: true,
             count: emails.length,
@@ -73,12 +70,31 @@ router.get('/', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching emails:', error);
         
-        // Provide detailed error information
         res.status(500).json({ 
             success: false,
             error: 'Failed to fetch emails',
             message: error.message,
             details: error.response?.data || 'Network or authentication error'
+        });
+    }
+});
+
+// Get specific email content
+router.get('/:emailId', requireAuth, async (req, res) => {
+    try {
+        const { emailId } = req.params;
+        const graphService = new MicrosoftGraphService(req.accessToken);
+        const email = await graphService.getEmailContent(emailId);
+        
+        res.json({
+            success: true,
+            email: email
+        });
+    } catch (error) {
+        console.error('Error fetching email content:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch email content',
+            message: error.message 
         });
     }
 });
@@ -130,7 +146,7 @@ router.post('/:emailId/respond', requireAuth, async (req, res) => {
     }
 });
 
-// CRITICAL: Send email response as REPLY to maintain threading
+// FIXED: Send email response as REPLY - NO DUPLICATE SIGNATURES
 router.post('/:emailId/send', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
@@ -145,10 +161,11 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         
         const graphService = new MicrosoftGraphService(req.accessToken);
         
-        }
+        // CRITICAL FIX: Don't add signature here - it's already included by Claude
+        console.log('🖊️ Using response content as-is (signature already included by Claude)');
         
         // Convert to HTML
-        let htmlContent = finalContent
+        let htmlContent = responseContent
             .replace(/\n\n/g, '||PARAGRAPH||')
             .replace(/\n/g, '<br>')
             .replace(/\|\|PARAGRAPH\|\|/g, '</p><p>');
@@ -161,6 +178,8 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         }
         
         htmlContent = htmlContent.replace(/<p><\/p>/g, '');
+        
+        console.log('📤 Sending reply with content length:', htmlContent.length);
         
         // Use replyToEmail to maintain threading
         const result = await graphService.replyToEmail(emailId, htmlContent, false);
@@ -185,7 +204,7 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
     }
 });
 
-// NEW: Endpoint to reply to all
+// FIXED: Reply to all endpoint - NO DUPLICATE SIGNATURES
 router.post('/:emailId/reply-all', requireAuth, async (req, res) => {
     try {
         const { emailId } = req.params;
@@ -200,10 +219,11 @@ router.post('/:emailId/reply-all', requireAuth, async (req, res) => {
         
         const graphService = new MicrosoftGraphService(req.accessToken);
         
-        }
+        // CRITICAL FIX: Don't add signature here - it's already included by Claude
+        console.log('🖊️ Using response content as-is (signature already included by Claude)');
         
         // Convert to HTML
-        let htmlContent = finalContent
+        let htmlContent = responseContent
             .replace(/\n\n/g, '</p><p>')
             .replace(/\n/g, '<br>')
             .replace(/^(.*)$/, '<p>$1</p>')
@@ -236,21 +256,36 @@ router.post('/:emailId/reply-all', requireAuth, async (req, res) => {
     }
 });
 
-// Other existing routes remain unchanged...
-router.get('/:emailId', requireAuth, async (req, res) => {
+// Process email query with AI
+router.post('/query', requireAuth, async (req, res) => {
     try {
-        const { emailId } = req.params;
+        const { query, includeDays = 1 } = req.body;
+        
+        if (!query) {
+            return res.status(400).json({ error: 'Query is required' });
+        }
+
         const graphService = new MicrosoftGraphService(req.accessToken);
-        const email = await graphService.getEmailContent(emailId);
+        const claudeService = new ClaudeAIService();
+        
+        const [emails, calendarEvents] = await Promise.all([
+            graphService.getRecentEmails(includeDays),
+            graphService.getCalendarEvents(7).catch(() => [])
+        ]);
+        
+        const response = await claudeService.processEmailQuery(query, emails, calendarEvents);
         
         res.json({
             success: true,
-            email: email
+            query: query,
+            response: response,
+            emailCount: emails.length,
+            calendarEventCount: calendarEvents.length
         });
     } catch (error) {
-        console.error('Error fetching email content:', error);
+        console.error('Error processing email query:', error);
         res.status(500).json({ 
-            error: 'Failed to fetch email content',
+            error: 'Failed to process query',
             message: error.message 
         });
     }
