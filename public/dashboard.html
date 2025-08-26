@@ -1638,31 +1638,68 @@
             }
         }
 
-        // REPLACE your existing loadStats() function in dashboard.html with this enhanced version:
+        // REPLACE the loadStats() function in your dashboard.html with this fixed version:
 
 async function loadStats() {
     try {
         console.log('📊 Loading dashboard statistics...');
         
-        // Load email stats
-        const emailResponse = await fetch('/api/emails?days=1');
-        if (emailResponse.ok) {
-            const emailData = await emailResponse.json();
-            const unreadCount = emailData.emails.filter(email => !email.isRead).length;
+        // Load today's and yesterday's email stats in parallel
+        const [todayResponse, yesterdayResponse, calendarResponse] = await Promise.all([
+            fetch('/api/emails?days=1'),
+            fetch('/api/emails/yesterday'),
+            fetch('/api/calendar/today')
+        ]);
+        
+        let todayEmails = { count: 0, emails: [] };
+        let yesterdayEmails = { count: 0, unreadCount: 0 };
+        
+        // Process today's emails
+        if (todayResponse.ok) {
+            const todayData = await todayResponse.json();
+            todayEmails = todayData;
             
-            document.getElementById('total-emails').textContent = emailData.count;
+            const unreadCount = todayData.emails.filter(email => !email.isRead).length;
+            
+            document.getElementById('total-emails').textContent = todayData.count;
             document.getElementById('unread-emails').textContent = unreadCount;
             
-            console.log('📧 Email stats:', { total: emailData.count, unread: unreadCount });
+            console.log('📧 Today\'s email stats:', { 
+                total: todayData.count, 
+                unread: unreadCount,
+                period: todayData.period,
+                dateRange: todayData.dateRange
+            });
+        } else {
+            console.error('Failed to load today\'s emails:', todayResponse.status);
+            document.getElementById('total-emails').textContent = '-';
+            document.getElementById('unread-emails').textContent = '-';
         }
-
+        
+        // Process yesterday's emails for trend calculation
+        if (yesterdayResponse.ok) {
+            yesterdayEmails = await yesterdayResponse.json();
+            console.log('📧 Yesterday\'s email stats:', {
+                total: yesterdayEmails.count,
+                unread: yesterdayEmails.unreadCount
+            });
+        }
+        
+        // Calculate and update trends
+        updateEmailTrends(todayEmails, yesterdayEmails);
+        
         // Load calendar stats
-        const calendarResponse = await fetch('/api/calendar/today');
         if (calendarResponse.ok) {
             const calendarData = await calendarResponse.json();
             document.getElementById('today-meetings').textContent = calendarData.eventCount || 0;
             
             console.log('📅 Calendar stats:', { meetings: calendarData.eventCount });
+            
+            // Update meetings trend (you can enhance this with yesterday's meetings)
+            updateMeetingsTrend(calendarData.eventCount);
+        } else {
+            document.getElementById('today-meetings').textContent = '-';
+            console.error('Failed to load calendar stats:', calendarResponse.status);
         }
 
         // Calculate and update productivity score
@@ -1674,128 +1711,117 @@ async function loadStats() {
         document.getElementById('total-emails').textContent = '-';
         document.getElementById('unread-emails').textContent = '-';
         document.getElementById('today-meetings').textContent = '-';
+        
+        // Show error indicators in trends
+        updateErrorTrends();
     }
 }
 
-// NEW: Calculate actual productivity score based on email and calendar metrics
-async function calculateProductivityScore() {
-    try {
-        console.log('🎯 Calculating productivity score...');
-        
-        // Get extended email data for productivity calculation
-        const [emailToday, emailWeek, calendarWeek] = await Promise.all([
-            fetch('/api/emails?days=1').then(r => r.json()),
-            fetch('/api/emails?days=7').then(r => r.json()),
-            fetch('/api/calendar/events?days=7').then(r => r.json())
-        ]);
+// NEW: Function to calculate and display email trends
+function updateEmailTrends(todayData, yesterdayData) {
+    const todayTotal = todayData.count || 0;
+    const todayUnread = (todayData.emails || []).filter(e => !e.isRead).length;
+    const yesterdayTotal = yesterdayData.count || 0;
+    const yesterdayUnread = yesterdayData.unreadCount || 0;
+    
+    // Calculate total emails trend
+    const totalTrend = calculateTrendPercentage(todayTotal, yesterdayTotal);
+    updateTrendDisplay('total-emails', totalTrend, 'emails');
+    
+    // Calculate unread emails trend
+    const unreadTrend = calculateTrendPercentage(todayUnread, yesterdayUnread);
+    updateTrendDisplay('unread-emails', unreadTrend, 'unread');
+    
+    console.log('📈 Email trends calculated:', {
+        totalTrend,
+        unreadTrend,
+        todayTotal,
+        yesterdayTotal,
+        todayUnread,
+        yesterdayUnread
+    });
+}
 
-        let score = 50; // Base score
-        let factors = [];
+// NEW: Helper function to calculate trend percentage
+function calculateTrendPercentage(today, yesterday) {
+    if (yesterday === 0) {
+        return today > 0 ? { percent: 100, direction: 'up' } : { percent: 0, direction: 'neutral' };
+    }
+    
+    const change = today - yesterday;
+    const percentChange = Math.round((change / yesterday) * 100);
+    
+    return {
+        percent: Math.abs(percentChange),
+        direction: percentChange > 0 ? 'up' : percentChange < 0 ? 'down' : 'neutral'
+    };
+}
 
-        if (emailToday.success && emailWeek.success) {
-            // Email responsiveness factor (40% of score)
-            const todayUnread = emailToday.emails.filter(e => !e.isRead).length;
-            const weeklyTotal = emailWeek.count;
-            const responseRate = weeklyTotal > 0 ? ((weeklyTotal - todayUnread) / weeklyTotal) * 100 : 100;
-            
-            if (responseRate >= 90) {
-                score += 20;
-                factors.push('📧 Excellent email responsiveness (+20)');
-            } else if (responseRate >= 70) {
-                score += 15;
-                factors.push('📧 Good email responsiveness (+15)');
-            } else if (responseRate >= 50) {
-                score += 10;
-                factors.push('📧 Fair email responsiveness (+10)');
+// NEW: Function to update trend display in the UI
+function updateTrendDisplay(metricId, trend, metricType) {
+    // Find the stat card containing this metric
+    const statValue = document.getElementById(metricId);
+    if (!statValue) return;
+    
+    const statCard = statValue.closest('.stat-card');
+    const trendElement = statCard?.querySelector('.stat-trend');
+    
+    if (!trendElement) return;
+    
+    const iconSpan = trendElement.querySelector('span:first-child');
+    const textSpan = trendElement.querySelector('span:last-child');
+    
+    if (!iconSpan || !textSpan) return;
+    
+    // Update icon and text based on trend
+    if (trend.direction === 'up') {
+        iconSpan.textContent = '📈';
+        textSpan.textContent = `+${trend.percent}% from yesterday`;
+        textSpan.style.color = metricType === 'unread' ? '#dc3545' : '#28a745'; // Red for unread increase, green for total increase
+    } else if (trend.direction === 'down') {
+        iconSpan.textContent = '📉';
+        textSpan.textContent = `-${trend.percent}% from yesterday`;
+        textSpan.style.color = metricType === 'unread' ? '#28a745' : '#ffc107'; // Green for unread decrease, yellow for total decrease
+    } else {
+        iconSpan.textContent = '📊';
+        textSpan.textContent = 'No change from yesterday';
+        textSpan.style.color = '#6c757d';
+    }
+}
+
+// NEW: Function to update meetings trend (placeholder for future enhancement)
+function updateMeetingsTrend(todayMeetings) {
+    const meetingsCard = document.querySelector('#today-meetings').closest('.stat-card');
+    const trendElement = meetingsCard?.querySelector('.stat-trend');
+    
+    if (trendElement) {
+        const textSpan = trendElement.querySelector('span:last-child');
+        if (textSpan) {
+            if (todayMeetings === 0) {
+                textSpan.textContent = 'Free day!';
+                textSpan.style.color = '#28a745';
+            } else if (todayMeetings <= 3) {
+                textSpan.textContent = `${todayMeetings} scheduled`;
+                textSpan.style.color = '#28a745';
+            } else if (todayMeetings <= 6) {
+                textSpan.textContent = `${todayMeetings} meetings - busy day`;
+                textSpan.style.color = '#ffc107';
             } else {
-                score += 5;
-                factors.push('📧 Needs improvement in email responsiveness (+5)');
+                textSpan.textContent = `${todayMeetings} meetings - very busy!`;
+                textSpan.style.color = '#dc3545';
             }
-
-            // Email volume management (20% of score)
-            const dailyAverage = weeklyTotal / 7;
-            if (dailyAverage <= 10) {
-                score += 15;
-                factors.push('📈 Great email volume management (+15)');
-            } else if (dailyAverage <= 20) {
-                score += 10;
-                factors.push('📈 Good email volume (+10)');
-            } else if (dailyAverage <= 30) {
-                score += 5;
-                factors.push('📈 Moderate email volume (+5)');
-            } else {
-                factors.push('📈 High email volume (no bonus)');
-            }
-        }
-
-        if (calendarWeek.success) {
-            // Calendar optimization factor (30% of score)
-            const weeklyMeetings = calendarWeek.count;
-            const dailyMeetingAverage = weeklyMeetings / 7;
-            
-            if (dailyMeetingAverage <= 3) {
-                score += 15;
-                factors.push('📅 Optimal meeting schedule (+15)');
-            } else if (dailyMeetingAverage <= 5) {
-                score += 10;
-                factors.push('📅 Good meeting balance (+10)');
-            } else if (dailyMeetingAverage <= 7) {
-                score += 5;
-                factors.push('📅 Busy but manageable schedule (+5)');
-            } else {
-                factors.push('📅 Very busy meeting schedule (no bonus)');
-            }
-        }
-
-        // Time-based bonus (10% of score)
-        const currentHour = new Date().getHours();
-        if (currentHour >= 9 && currentHour <= 17) {
-            score += 10;
-            factors.push('⏰ Active during business hours (+10)');
-        }
-
-        // Cap the score at 100
-        score = Math.min(100, Math.max(0, score));
-
-        // Update the productivity score in the UI
-        const scoreElement = document.querySelector('.stat-card:last-child .stat-value');
-        if (scoreElement) {
-            scoreElement.textContent = `${score}%`;
-            
-            // Update the trend based on score
-            const trendElement = scoreElement.parentElement.querySelector('.stat-trend span:last-child');
-            if (trendElement) {
-                if (score >= 80) {
-                    trendElement.textContent = '+8% this week';
-                    trendElement.style.color = '#28a745';
-                } else if (score >= 60) {
-                    trendElement.textContent = '+3% this week';
-                    trendElement.style.color = '#ffc107';
-                } else {
-                    trendElement.textContent = '-2% this week';
-                    trendElement.style.color = '#dc3545';
-                }
-            }
-        }
-
-        console.log('🎯 Productivity score calculated:', {
-            score: score,
-            factors: factors
-        });
-
-        // Store score for potential tooltip or detail view
-        window.productivityFactors = factors;
-        
-    } catch (error) {
-        console.error('Error calculating productivity score:', error);
-        // Fallback to default if calculation fails
-        const scoreElement = document.querySelector('.stat-card:last-child .stat-value');
-        if (scoreElement) {
-            scoreElement.textContent = '75%';
         }
     }
 }
 
+// NEW: Function to show error states in trends
+function updateErrorTrends() {
+    const trendElements = document.querySelectorAll('.stat-trend span:last-child');
+    trendElements.forEach(element => {
+        element.textContent = 'Unable to load';
+        element.style.color = '#dc3545';
+    });
+}
         // Utility functions for formatting responses
         function formatResponse(text) {
             let html = text;
