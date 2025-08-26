@@ -34,7 +34,7 @@ class MicrosoftGraphService {
         
         try {
             const emails = await this.graphClient
-                .api('/me/messages')
+                .api('/me/mailFolders/inbox/messages')
                 .filter(`receivedDateTime ge ${startDate.toISOString()}`)
                 .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance,hasAttachments')
                 .orderby('receivedDateTime desc')
