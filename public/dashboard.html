@@ -909,7 +909,7 @@
             }
         }
 
-        /* Enhanced Dark mode support */
+      
         @media (prefers-color-scheme: dark) {
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
@@ -927,12 +927,6 @@
                 background: #3a3a3a;
                 border-color: #667eea;
                 color: #ffffff;
-            }
-            
-            /* FIX: Input fields turning white on focus */
-            input:focus, textarea:focus {
-                background: #3a3a3a !important;
-                color: #ffffff !important;
             }
             
             .form-input::placeholder,
@@ -963,7 +957,15 @@
             .response-area li,
             .response-area strong,
             .response-area em {
-                color: #ffffff !important;
+                color: #ffffff;
+            }
+            
+            /* EXCLUDE these from dark mode - keep them white */
+            .modal, .modal *,
+            [style*="background: white"], [style*="background: white"] *,
+            .email-item.selected {
+                background: white !important;
+                color: black !important;
             }
             
             .form-label {
