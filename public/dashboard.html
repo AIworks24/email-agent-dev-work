@@ -1126,6 +1126,91 @@
                 color: #4ade80 !important;
                 background: #1a4a1a !important;
             }
+             /* Colors for this section */
+          #email-responder {
+            --email-bg: #1f1f1f;
+            --email-border: #3a3a3a;
+            --email-text: #f5f5f5;
+            --email-secondary: #b0b0b0;
+            --email-meta: #999999;
+            --email-hover: #262626;
+            --email-selected: #1f2937; /* dark slate blue */
+            --email-selected-border: #667eea;
+          }
+        
+          /* Base row (covers div/li/table-row approaches) */
+          #email-responder .email-item,
+          #email-responder .list-group-item,
+          #email-responder .card,
+          #email-responder .email-row,
+          #email-responder > .email-item,
+          #email-responder > div {
+            background-color: var(--email-bg) !important;
+            color: var(--email-text) !important;
+            border-color: var(--email-border) !important;
+          }
+        
+          /* Nuke common “light” utility classes inside the list */
+          #email-responder .bg-white,
+          #email-responder .bg-light,
+          #email-responder .card,
+          #email-responder .list-group-item,
+          #email-responder [class*="bg-"],
+          #email-responder [class*="text-gray"],
+          #email-responder .text-muted {
+            background-color: var(--email-bg) !important;
+            color: var(--email-secondary) !important;
+          }
+        
+          /* Ensure all text inside rows is readable */
+          #email-responder .email-item * {
+            color: var(--email-text) !important;
+            background: transparent !important;
+          }
+        
+          /* Secondary text (preview line) */
+          #email-responder .email-preview,
+          #email-responder .email-preview * {
+            color: var(--email-secondary) !important;
+          }
+        
+          /* Meta line (date, tags) */
+          #email-responder .email-meta,
+          #email-responder .email-meta * {
+            color: var(--email-meta) !important;
+          }
+        
+          /* Sender */
+          #email-responder .email-from,
+          #email-responder .email-from * {
+            color: #cccccc !important;
+          }
+        
+          /* Hover */
+          #email-responder .email-item:hover {
+            background-color: var(--email-hover) !important;
+          }
+        
+          /* Selected/active states (covers multiple patterns) */
+          #email-responder .email-item.selected,
+          #email-responder .email-item.active,
+          #email-responder .list-group-item.active,
+          #email-responder .email-item:has(input[type="checkbox"]:checked) {
+            background-color: var(--email-selected) !important;
+            border-color: var(--email-selected-border) !important;
+            box-shadow: 0 0 0 2px rgba(102,126,234,0.35) inset !important;
+          }
+        
+          /* If rows are <tr> inside a <table> */
+          #email-responder tr,
+          #email-responder td,
+          #email-responder th {
+            background-color: var(--email-bg) !important;
+            color: var(--email-text) !important;
+            border-color: var(--email-border) !important;
+          }
+        
+           
                 
             .email-item,
             .email-item *,
