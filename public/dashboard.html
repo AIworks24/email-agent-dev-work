@@ -3230,6 +3230,58 @@ function addInputFeedback(input) {
         }
     });
 }
+        / DARK MODE EMAIL STYLING FUNCTION - Add this to your <script> section
+function forceEmailDarkModeStyles() {
+    setTimeout(() => {
+        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (isDarkMode) {
+            // Style email list container
+            const emailList = document.getElementById('email-list');
+            if (emailList) {
+                emailList.style.background = '#2a2a2a';
+                emailList.style.borderColor = '#4a4a4a';
+            }
+            
+            // Style email controls
+            const emailControls = document.getElementById('email-controls');
+            if (emailControls) {
+                emailControls.style.background = '#2a2a2a';
+                emailControls.style.borderColor = '#4a4a4a';
+                
+                const controlsChildren = emailControls.querySelectorAll('*');
+                controlsChildren.forEach(child => {
+                    child.style.setProperty('color', '#ffffff', 'important');
+                });
+            }
+            
+            // Style each email item
+            const emailItems = document.querySelectorAll('.email-item');
+            emailItems.forEach(emailItem => {
+                emailItem.style.background = '#2a2a2a';
+                emailItem.style.borderBottomColor = '#4a4a4a';
+                
+                // Force style all child elements
+                const allChildren = emailItem.querySelectorAll('*');
+                allChildren.forEach(child => {
+                    if (!child.classList.contains('email-checkbox')) {
+                        if (child.classList.contains('email-subject')) {
+                            child.style.setProperty('color', '#ffffff', 'important');
+                        } else if (child.classList.contains('email-from')) {
+                            child.style.setProperty('color', '#cccccc', 'important');
+                        } else if (child.classList.contains('email-preview')) {
+                            child.style.setProperty('color', '#b0b0b0', 'important');
+                        } else if (child.classList.contains('email-meta') || child.closest('.email-meta')) {
+                            child.style.setProperty('color', '#999999', 'important');
+                        } else {
+                            child.style.setProperty('color', '#ffffff', 'important');
+                        }
+                    }
+                });
+            });
+        }
+    }, 100);
+}
 
         // Auto-refresh stats every 5 minutes
         setInterval(loadStats, 5 * 60 * 1000);
