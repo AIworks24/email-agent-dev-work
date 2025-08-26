@@ -929,9 +929,8 @@
                 color: #ffffff;
             }
             
-            /* ONLY ADD THESE 3 LINES to fix the original issues */
-            #signature-email:focus, #signature-website:focus, #signature-additional:focus,
-            #response-context:focus, #calendar-query:focus, #ai-query:focus {
+            /* FIX: Input fields turning white on focus */
+            input:focus, textarea:focus {
                 background: #3a3a3a !important;
                 color: #ffffff !important;
             }
@@ -964,7 +963,7 @@
             .response-area li,
             .response-area strong,
             .response-area em {
-                color: #ffffff;
+                color: #ffffff !important;
             }
             
             .form-label {
