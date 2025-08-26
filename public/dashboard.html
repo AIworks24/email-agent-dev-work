@@ -909,7 +909,7 @@
             }
         }
 
-                /* Enhanced Dark mode support */
+               /* Enhanced Dark mode support */
         @media (prefers-color-scheme: dark) {
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
@@ -922,18 +922,23 @@
                 border: 1px solid #4a4a4a;
             }
             
-            /* Only specific input fields that were problematic */
+            /* Input fields - only main dashboard inputs */
+            .form-input, .form-select, .form-textarea {
+                background: #3a3a3a;
+                border-color: #667eea;
+                color: #ffffff;
+            }
+            
+            /* Specific problematic inputs */
             #signature-email, #signature-website, #signature-additional,
             #response-context, #calendar-query, #analyzer-query, #ai-query {
                 background: #3a3a3a !important;
-                border-color: #667eea !important;
                 color: #ffffff !important;
             }
             
             #signature-email:focus, #signature-website:focus, #signature-additional:focus,
             #response-context:focus, #calendar-query:focus, #analyzer-query:focus, #ai-query:focus {
                 background: #3a3a3a !important;
-                border-color: #667eea !important;
                 color: #ffffff !important;
             }
             
@@ -951,7 +956,6 @@
                 color: #ffffff;
             }
             
-            .response-area *,
             .response-area h1, .response-area h2, .response-area h3, 
             .response-area h4, .response-area h5, .response-area h6,
             .response-area p, .response-area div, .response-area span,
@@ -959,8 +963,11 @@
                 color: #ffffff !important;
             }
             
-            /* Fix inline white background in generated responses */
-            #response-content div[style*="background: white"] {
+            /* Fix white backgrounds in email responses */
+            .email-item.selected,
+            #response-content div[style*="background: white"],
+            #response-content div[style*="background:#fff"],
+            #response-content div[style*="background: #fff"] {
                 background: #3a3a3a !important;
             }
             
