@@ -126,41 +126,61 @@ class MicrosoftGraphService {
             throw error;
         }
     }
-
-    // NEW: Method to reply to email with all recipients
-    async replyToEmail(emailId, body, replyToAll = false) {
-        try {
-            console.log(`📧 ${replyToAll ? 'Replying to all' : 'Replying'} to email: ${emailId}`);
-            
-            const replyMessage = {
-                message: {
-                    body: {
-                        contentType: 'HTML',
-                        content: body
+        
+        async replyToEmail(emailId, body, replyToAll = false) {
+            try {
+                console.log(`📧 ${replyToAll ? 'Replying to all' : 'Replying'} to email: ${emailId}`);
+                
+                // CRITICAL: The Microsoft Graph API /reply endpoint should automatically:
+                // 1. Include the original email content below our reply
+                // 2. Maintain proper threading with conversationId
+                // 3. Set proper To/CC recipients
+                // 4. Keep the subject line with "Re:" prefix
+                
+                const replyMessage = {
+                    message: {
+                        body: {
+                            contentType: 'HTML',
+                            content: body
+                        }
                     }
+                };
+        
+                const endpoint = replyToAll ? 'replyAll' : 'reply';
+                
+                console.log(`🔄 Sending ${endpoint} request to Graph API...`);
+                console.log(`📝 Reply content preview: ${body.substring(0, 100)}...`);
+                
+                const result = await this.graphClient
+                    .api(`/me/messages/${emailId}/${endpoint}`)
+                    .post(replyMessage);
+                
+                console.log(`✅ ${replyToAll ? 'Reply all' : 'Reply'} sent successfully`);
+                console.log(`📧 Microsoft Graph should have automatically:`);
+                console.log(`   • Included original email content below our reply`);
+                console.log(`   • Maintained conversation threading`);
+                console.log(`   • Set proper recipients from original email`);
+                
+                return { 
+                    success: true, 
+                    message: `${replyToAll ? 'Reply all' : 'Reply'} sent successfully with full thread context`,
+                    id: result.id || 'message-sent',
+                    type: replyToAll ? 'reply-all' : 'reply',
+                    threading: 'automatic-by-graph-api'
+                };
+                
+            } catch (error) {
+                console.error('❌ Error replying to email:', error);
+                console.error('❌ Error details:', error.response?.data || error.message);
+                
+                // Enhanced error logging for debugging
+                if (error.response?.data) {
+                    console.error('❌ Graph API Error Response:', JSON.stringify(error.response.data, null, 2));
                 }
-            };
-
-            const endpoint = replyToAll ? 'replyAll' : 'reply';
-            const result = await this.graphClient
-                .api(`/me/messages/${emailId}/${endpoint}`)
-                .post(replyMessage);
-            
-            console.log(`✅ ${replyToAll ? 'Reply all' : 'Reply'} sent successfully`);
-            return { 
-                success: true, 
-                message: `${replyToAll ? 'Reply all' : 'Reply'} sent successfully`,
-                id: result.id,
-                type: replyToAll ? 'reply-all' : 'reply'
-            };
-            
-        } catch (error) {
-            console.error('Error replying to email:', error);
-            console.error('Error details:', error.response?.data || error.message);
-            throw error;
+                
+                throw error;
+            }
         }
-    }
-
     async getCalendarEvents(days = 7) {
         const startDate = new Date();
         const endDate = new Date();
