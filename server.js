@@ -1079,6 +1079,128 @@ app.post('/api/calendar/create-invite', async (req, res) => {
     }
 });
 
+// Email API endpoint for dashboard metrics - TODAY ONLY
+app.get('/api/emails', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const { days = 1 } = req.query;
+        const graphClient = createGraphClient(accessToken);
+        
+        // Calculate the proper date range for "today" (calendar day, not 24 hours)
+        const userTimezone = 'America/New_York'; // You can make this dynamic based on user
+        const now = new Date();
+        
+        if (days == 1) {
+            // For "today" - get emails from start of current day to now
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            
+            console.log('📧 Fetching TODAY\'S emails since:', todayStart.toISOString());
+            
+            const emails = await graphClient
+                .api('/me/mailFolders/inbox/messages')
+                .filter(`receivedDateTime ge ${todayStart.toISOString()}`)
+                .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance,hasAttachments')
+                .orderby('receivedDateTime desc')
+                .top(100)
+                .get();
+            
+            console.log(`✅ Found ${emails.value.length} emails for today`);
+            
+            return res.json({
+                success: true,
+                count: emails.value.length,
+                emails: emails.value,
+                period: 'today',
+                dateRange: {
+                    since: todayStart.toISOString(),
+                    until: now.toISOString()
+                }
+            });
+        } else {
+            // For multiple days - use the existing logic
+            const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+            
+            const emails = await graphClient
+                .api('/me/mailFolders/inbox/messages')
+                .filter(`receivedDateTime ge ${sinceDate.toISOString()}`)
+                .select('id,subject,from,receivedDateTime,bodyPreview,isRead,importance,hasAttachments')
+                .orderby('receivedDateTime desc')
+                .top(100)
+                .get();
+            
+            return res.json({
+                success: true,
+                count: emails.value.length,
+                emails: emails.value,
+                period: `${days} days`,
+                dateRange: {
+                    since: sinceDate.toISOString(),
+                    until: now.toISOString()
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error fetching emails for dashboard:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch emails', 
+            message: error.message 
+        });
+    }
+});
+
+// Add endpoint to get yesterday's stats for comparison
+app.get('/api/emails/yesterday', async (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+        const graphClient = createGraphClient(accessToken);
+        
+        // Get yesterday's date range
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
+        
+        const yesterdayEnd = new Date(yesterday);
+        yesterdayEnd.setHours(23, 59, 59, 999);
+        
+        console.log('📧 Fetching YESTERDAY\'S emails:', {
+            from: yesterday.toISOString(),
+            to: yesterdayEnd.toISOString()
+        });
+        
+        const emails = await graphClient
+            .api('/me/mailFolders/inbox/messages')
+            .filter(`receivedDateTime ge '${yesterday.toISOString()}' and receivedDateTime le '${yesterdayEnd.toISOString()}'`)
+            .select('id,subject,from,receivedDateTime,isRead')
+            .get();
+        
+        console.log(`✅ Found ${emails.value.length} emails for yesterday`);
+        
+        res.json({
+            success: true,
+            count: emails.value.length,
+            unreadCount: emails.value.filter(e => !e.isRead).length,
+            emails: emails.value
+        });
+        
+    } catch (error) {
+        console.error('Error fetching yesterday\'s emails:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch yesterday\'s emails', 
+            message: error.message 
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 AI Email Agent running on port ${PORT}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
