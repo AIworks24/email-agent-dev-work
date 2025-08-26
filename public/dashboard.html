@@ -928,21 +928,21 @@
             textarea, select,
             #signature-email, #signature-website, #signature-additional,
             #response-context, #calendar-query, #analyzer-query, #ai-query {
-                background: #3a3a3a;
-                border-color: #667eea;
-                color: #ffffff;
+                background: #3a3a3a !important;
+                border-color: #667eea !important;
+                color: #ffffff !important;
             }
             
-            /* Input focus states */
+            /* Input focus states - force override browser defaults */
             .form-input:focus, .form-select:focus, .form-textarea:focus,
             input[type="text"]:focus, input[type="email"]:focus, input[type="url"]:focus, input[type="tel"]:focus,
             textarea:focus, select:focus,
             #signature-email:focus, #signature-website:focus, #signature-additional:focus,
             #response-context:focus, #calendar-query:focus, #analyzer-query:focus, #ai-query:focus {
-                background: #3a3a3a;
-                border-color: #667eea;
-                color: #ffffff;
-                outline: none;
+                background: #3a3a3a !important;
+                border-color: #667eea !important;
+                color: #ffffff !important;
+                outline: none !important;
             }
             
             .form-input::placeholder,
@@ -962,20 +962,24 @@
             }
             
             /* All text inside response areas - fix grayed out text */
-            .response-area *,
             .response-area h1, 
             .response-area h2, 
             .response-area h3, 
             .response-area h4, 
             .response-area h5, 
-            .response-area h6,
+            .response-area h6 {
+                color: #ffffff !important;
+                font-weight: bold !important;
+            }
+            
             .response-area p,
             .response-area div,
             .response-area span,
             .response-area li,
             .response-area strong,
-            .response-area em {
-                color: #ffffff;
+            .response-area em,
+            .response-area * {
+                color: #ffffff !important;
             }
             
             .form-label {
