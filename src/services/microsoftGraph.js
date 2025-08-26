@@ -127,60 +127,71 @@ class MicrosoftGraphService {
         }
     }
         
-        async replyToEmail(emailId, body, replyToAll = false) {
+                async replyToEmail(emailId, body, replyToAll = false) {
             try {
                 console.log(`📧 ${replyToAll ? 'Replying to all' : 'Replying'} to email: ${emailId}`);
                 
-                // CRITICAL: The Microsoft Graph API /reply endpoint should automatically:
-                // 1. Include the original email content below our reply
-                // 2. Maintain proper threading with conversationId
-                // 3. Set proper To/CC recipients
-                // 4. Keep the subject line with "Re:" prefix
+                // SOLUTION: Microsoft Graph API should handle threading automatically
+                // The key is to use ONLY the "comment" parameter for proper threading
+                // According to Microsoft docs and Stack Overflow, this maintains the thread
                 
                 const replyMessage = {
-                    message: {
-                        body: {
-                            contentType: 'HTML',
-                            content: body
-                        }
-                    }
+                    comment: body  // HTML content is supported in comment parameter
+                    // Do NOT use message.body.content - this breaks threading
+                    // Comment automatically includes original email content below
                 };
         
                 const endpoint = replyToAll ? 'replyAll' : 'reply';
                 
-                console.log(`🔄 Sending ${endpoint} request to Graph API...`);
-                console.log(`📝 Reply content preview: ${body.substring(0, 100)}...`);
+                console.log(`🔄 Sending ${endpoint} using comment parameter for proper threading...`);
+                console.log(`📝 Reply content (first 50 chars): ${body.substring(0, 50)}...`);
+                console.log(`🧵 Microsoft Graph should automatically:`);
+                console.log(`   • Add our reply at the top`);
+                console.log(`   • Include original email content below`);
+                console.log(`   • Maintain proper conversationId threading`);
+                console.log(`   • Set correct subject with "Re:" prefix`);
+                console.log(`   • Preserve all recipients for threading`);
                 
                 const result = await this.graphClient
                     .api(`/me/messages/${emailId}/${endpoint}`)
                     .post(replyMessage);
                 
-                console.log(`✅ ${replyToAll ? 'Reply all' : 'Reply'} sent successfully`);
-                console.log(`📧 Microsoft Graph should have automatically:`);
-                console.log(`   • Included original email content below our reply`);
-                console.log(`   • Maintained conversation threading`);
-                console.log(`   • Set proper recipients from original email`);
+                console.log(`✅ ${replyToAll ? 'Reply all' : 'Reply'} sent with automatic threading!`);
+                console.log(`📧 Outlook should now display:`);
+                console.log(`   • Your AI response at the top of the email`);
+                console.log(`   • Original email content below (threaded)`);
+                console.log(`   • Proper conversation grouping in Outlook`);
+                console.log(`   • Future replies will maintain the thread`);
                 
                 return { 
                     success: true, 
-                    message: `${replyToAll ? 'Reply all' : 'Reply'} sent successfully with full thread context`,
-                    id: result.id || 'message-sent',
+                    message: `${replyToAll ? 'Reply all' : 'Reply'} sent with Outlook threading`,
+                    id: result?.id || 'sent-successfully',
                     type: replyToAll ? 'reply-all' : 'reply',
-                    threading: 'automatic-by-graph-api'
+                    threading: 'outlook-native-threading',
+                    method: 'comment-parameter'
                 };
                 
             } catch (error) {
-                console.error('❌ Error replying to email:', error);
-                console.error('❌ Error details:', error.response?.data || error.message);
+                console.error('❌ Error replying with Outlook threading:', error);
                 
-                // Enhanced error logging for debugging
+                // Enhanced error logging for debugging the threading issue
                 if (error.response?.data) {
-                    console.error('❌ Graph API Error Response:', JSON.stringify(error.response.data, null, 2));
+                    console.error('❌ Microsoft Graph Error:', JSON.stringify(error.response.data, null, 2));
                 }
+                
+                console.error('❌ Full error details:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    statusText: error.response?.statusText,
+                    url: error.config?.url,
+                    method: error.config?.method
+                });
                 
                 throw error;
             }
         }
+
     async getCalendarEvents(days = 7) {
         const startDate = new Date();
         const endDate = new Date();
