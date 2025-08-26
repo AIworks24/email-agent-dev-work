@@ -910,6 +910,7 @@
         }
 
       
+        /* Enhanced Dark mode support */
         @media (prefers-color-scheme: dark) {
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
@@ -958,14 +959,6 @@
             .response-area strong,
             .response-area em {
                 color: #ffffff;
-            }
-            
-            /* EXCLUDE these from dark mode - keep them white */
-            .modal, .modal *,
-            [style*="background: white"], [style*="background: white"] *,
-            .email-item.selected {
-                background: white !important;
-                color: black !important;
             }
             
             .form-label {
