@@ -955,7 +955,17 @@
                 color: #ffffff;
             }
             
-            /* All text inside response areas */
+            /* Exception: Generated email response should stay white */
+            #response-preview {
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+            
+            #response-preview * {
+                color: #000000 !important;
+            }
+            
+            /* All other text inside response areas */
             .response-area *,
             .response-area h1, 
             .response-area h2, 
