@@ -910,94 +910,221 @@
         }
 
       
-        /* Enhanced Dark mode support */
+        /* Enhanced Dark mode support - COMPLETE FIX */
         @media (prefers-color-scheme: dark) {
+            
+            /* 1. BASE STYLING - Body and main containers */
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-                color: #ffffff;
+                color: #ffffff !important;
             }
             
-            .sidebar, .content-section, .stat-card {
-                background: #2a2a2a;
-                color: #ffffff;
-                border: 1px solid #4a4a4a;
+            /* 2. MAIN CONTAINERS - Sidebar, sections, cards */
+            .sidebar, 
+            .content-section, 
+            .stat-card,
+            .meeting-form,
+            .signature-settings,
+            .panel,
+            .actions-panel {
+                background: #2a2a2a !important;
+                color: #ffffff !important;
+                border: 1px solid #4a4a4a !important;
             }
             
-            /* Input fields - properly scoped to dark mode only */
-            .form-input, .form-select, .form-textarea {
-                background: #3a3a3a;
-                border-color: #667eea;
-                color: #ffffff;
+            /* 3. FORM INPUTS - This fixes the main white text on white background issue */
+            .form-input, 
+            .form-select, 
+            .form-textarea,
+            input[type="text"], 
+            input[type="email"], 
+            input[type="password"],
+            input[type="datetime-local"], 
+            input[type="number"],
+            select, 
+            textarea {
+                background: #3a3a3a !important;
+                border: 2px solid #667eea !important;
+                color: #ffffff !important;
             }
             
+            /* 4. FORM INPUT FOCUS STATES */
+            .form-input:focus, 
+            .form-select:focus, 
+            .form-textarea:focus,
+            input[type="text"]:focus, 
+            input[type="email"]:focus, 
+            input[type="password"]:focus,
+            input[type="datetime-local"]:focus,
+            input[type="number"]:focus,
+            select:focus, 
+            textarea:focus {
+                background: #4a4a4a !important;
+                border-color: #764ba2 !important;
+                color: #ffffff !important;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+            }
+            
+            /* 5. PLACEHOLDERS */
             .form-input::placeholder,
             .form-select::placeholder, 
-            .form-textarea::placeholder {
-                color: #cccccc;
-                opacity: 1;
+            .form-textarea::placeholder,
+            input::placeholder,
+            textarea::placeholder {
+                color: #cccccc !important;
+                opacity: 1 !important;
             }
             
-            /* Response areas - properly scoped */
+            /* 6. RESPONSE AREAS - Generated email content areas */
             .response-area {
-                background: #3a3a3a;
-                border-color: #667eea;
-                color: #ffffff;
+                background: #3a3a3a !important;
+                border: 2px solid #667eea !important;
+                color: #ffffff !important;
             }
             
-            /* All text inside response areas */
+            /* 7. ALL TEXT INSIDE RESPONSE AREAS */
             .response-area *,
             .response-area h1, 
             .response-area h2, 
             .response-area h3, 
-            .response-area h4, 
-            .response-area h5, 
+            .response-area h4,
+            .response-area h5,
             .response-area h6,
             .response-area p,
-            .response-area div,
-            .response-area span,
             .response-area li,
+            .response-area span,
+            .response-area div,
             .response-area strong,
             .response-area em {
-                color: #ffffff;
+                color: #ffffff !important;
+                background: transparent !important;
             }
             
-            .form-label {
-                color: #ffffff;
+            /* 8. FORM LABELS */
+            .form-label,
+            label {
+                color: #ffffff !important;
             }
             
-            .section-title {
-                color: #ffffff;
+            /* 9. SECTION TITLES AND HEADERS */
+            .section-title,
+            .card h2,
+            h1, h2, h3, h4, h5, h6 {
+                color: #ffffff !important;
+                border-bottom-color: #667eea !important;
             }
             
-            .section-subtitle {
-                color: #cccccc;
+            /* 10. SIGNATURE PREVIEW FIX */
+            .signature-preview {
+                background: #3a3a3a !important;
+                border: 2px solid #667eea !important;
+                color: #ffffff !important;
             }
             
-            .email-subject, .email-from, .email-preview, .email-meta {
-                color: #ffffff;
+            .signature-preview::before {
+                background: #2a2a2a !important;
+                color: #667eea !important;
             }
             
-            .email-list {
-                background: #2a2a2a;
-                border-color: #4a4a4a;
+            .signature-preview.empty {
+                color: #cccccc !important;
             }
             
-            .email-item {
-                background: #2a2a2a;
-                border-bottom: 1px solid #4a4a4a;
-                color: #ffffff;
+            /* 11. STATUS MESSAGES */
+            .status-success {
+                background: #1a4a1a !important;
+                color: #4ade80 !important;
+                border-color: #22c55e !important;
+            }
+
+            .status-error {
+                background: #4a1a1a !important;
+                color: #f87171 !important;
+                border-color: #ef4444 !important;
+            }
+
+            .status-info {
+                background: #1a1a4a !important;
+                color: #60a5fa !important;
+                border-color: #3b82f6 !important;
             }
             
-            .email-item:hover {
-                background: #3a3a3a;
+            /* 12. LOADING STATES */
+            .loading {
+                color: #cccccc !important;
             }
             
-            .stat-value {
-                color: #ffffff;
+            /* 13. GENERAL TEXT ELEMENTS */
+            .section-subtitle,
+            .stat-label,
+            .admin-info,
+            p, span, div {
+                color: #cccccc !important;
             }
             
-            .stat-label {
-                color: #ffffff;
+            /* 14. NAVIGATION AND SIDEBAR ITEMS */
+            .nav-item,
+            .sidebar a,
+            .sidebar li {
+                color: #ffffff !important;
+            }
+            
+            .nav-item:hover,
+            .sidebar a:hover {
+                background: #4a4a4a !important;
+                color: #667eea !important;
+            }
+            
+            /* 15. TABLES (if any) */
+            table {
+                background: #2a2a2a !important;
+                color: #ffffff !important;
+            }
+            
+            th, td {
+                border-color: #4a4a4a !important;
+                color: #ffffff !important;
+            }
+            
+            /* 16. DROPDOWNS AND SELECTS */
+            option {
+                background: #3a3a3a !important;
+                color: #ffffff !important;
+            }
+            
+            /* 17. SPECIFIC FIXES FOR EMAIL CONTROLS */
+            #email-controls {
+                background: #2a2a2a !important;
+                border-color: #4a4a4a !important;
+                color: #ffffff !important;
+            }
+            
+            #email-controls * {
+                color: #ffffff !important;
+            }
+            
+            /* 18. SELECTED COUNT AND BADGES */
+            #selected-count {
+                background: #667eea !important;
+                color: white !important;
+            }
+            
+            /* 19. QUICK ACTIONS - Keep gradient but ensure text is visible */
+            .quick-action {
+                /* Keep existing gradient */
+            }
+            
+            /* 20. FORM VALIDATION MESSAGES */
+            .field-error,
+            .validation-error {
+                color: #f87171 !important;
+                background: #4a1a1a !important;
+            }
+            
+            .field-success,
+            .validation-success {
+                color: #4ade80 !important;
+                background: #1a4a1a !important;
             }
         }
     </style>
