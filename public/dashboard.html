@@ -1615,10 +1615,16 @@
             });
             
             // Show selected section
-            document.getElementById(sectionName + '-section').classList.add('active');
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
             
-            // Add active class to corresponding nav link
-            event.target.closest('.nav-link').classList.add('active');
+            // Add active class to corresponding nav link - find by the onclick attribute
+            const navLink = document.querySelector(`[onclick*="${sectionName}"]`);
+            if (navLink) {
+                navLink.classList.add('active');
+            }
         }
 
         // Load user information
