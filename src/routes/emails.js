@@ -145,16 +145,6 @@ router.post('/:emailId/send', requireAuth, async (req, res) => {
         
         const graphService = new MicrosoftGraphService(req.accessToken);
         
-        // Get user signature and add if enabled
-        const userSignature = await getUserSignature(req.userEmail, req.userTenant);
-        let finalContent = responseContent;
-        
-        if (userSignature && userSignature.enabled) {
-            const claudeService = new ClaudeAIService();
-            const signature = claudeService.formatSignature ? claudeService.formatSignature(userSignature) : '';
-            if (signature) {
-                finalContent += signature;
-            }
         }
         
         // Convert to HTML
@@ -210,16 +200,6 @@ router.post('/:emailId/reply-all', requireAuth, async (req, res) => {
         
         const graphService = new MicrosoftGraphService(req.accessToken);
         
-        // Get user signature
-        const userSignature = await getUserSignature(req.userEmail, req.userTenant);
-        let finalContent = responseContent;
-        
-        if (userSignature && userSignature.enabled) {
-            const claudeService = new ClaudeAIService();
-            const signature = claudeService.formatSignature ? claudeService.formatSignature(userSignature) : '';
-            if (signature) {
-                finalContent += signature;
-            }
         }
         
         // Convert to HTML
