@@ -1019,6 +1019,11 @@
             
             .stat-label {
                 color: #ffffff;
+            /* Fix input fields turning white on focus */
+            input:focus, textarea:focus { background: #3a3a3a !important; color: #ffffff !important; }
+            
+            /* Fix grayed out text in AI responses */  
+            .response-area { color: #ffffff !important; }
             }
         }
     </style>
