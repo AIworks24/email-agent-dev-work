@@ -2097,15 +2097,28 @@ async function loadEmailsForResponse() {
             displayEmailList(data.emails);
             document.getElementById('email-list-container').style.display = 'block';
             
-            // FIXED: Remove any existing summary before adding new one
+            // CRITICAL FIX: Remove ALL existing notifications with multiple selectors
             const emailListContainer = document.getElementById('email-list-container');
-            const existingSummary = emailListContainer.querySelector('div[style*="background: #d4edda"]');
-            if (existingSummary) {
-                existingSummary.remove();
-            }
             
-            // Add ONLY ONE success summary
+            // Remove by style attribute (green background)
+            const existingByStyle = emailListContainer.querySelectorAll('div[style*="background: #d4edda"]');
+            existingByStyle.forEach(element => element.remove());
+            
+            // Remove by class (if any have classes)
+            const existingByClass = emailListContainer.querySelectorAll('.email-notification, .success-notification');
+            existingByClass.forEach(element => element.remove());
+            
+            // Remove any div containing "Successfully loaded" text
+            const allDivs = emailListContainer.querySelectorAll('div');
+            allDivs.forEach(div => {
+                if (div.textContent && div.textContent.includes('Successfully loaded') && div.textContent.includes('emails')) {
+                    div.remove();
+                }
+            });
+            
+            // Add ONLY ONE new success summary with unique identifier
             const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'email-load-notification'; // Add class for easy removal
             summaryDiv.style.cssText = 'background: #d4edda; color: #155724; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #c3e6cb;';
             summaryDiv.innerHTML = `
                 <strong>✅ Successfully loaded ${data.count} emails</strong> from the past 7 days<br>
@@ -2114,8 +2127,12 @@ async function loadEmailsForResponse() {
                 </small>
             `;
             
-            // Insert at the beginning
-            emailListContainer.insertBefore(summaryDiv, emailListContainer.firstChild);
+            // Insert at the very beginning of the container
+            if (emailListContainer.firstChild) {
+                emailListContainer.insertBefore(summaryDiv, emailListContainer.firstChild);
+            } else {
+                emailListContainer.appendChild(summaryDiv);
+            }
             
             // Restore button
             loadButton.textContent = originalText;
@@ -2126,6 +2143,8 @@ async function loadEmailsForResponse() {
             const errorData = await response.json();
             console.error('❌ Error loading emails:', errorData);
             alert(`Error loading emails: ${errorData.message || 'Unknown error'}`);
+            
+            // Restore button
             loadButton.textContent = originalText;
             loadButton.disabled = false;
         }
@@ -2141,7 +2160,7 @@ async function loadEmailsForResponse() {
     }
 }
 
-async function analyzeEmails() {
+    async function analyzeEmails() {
     const query = document.getElementById('analyzer-query').value.trim();
     if (!query) {
         alert('Please enter a question about your emails');
