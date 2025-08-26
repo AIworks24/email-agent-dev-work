@@ -961,24 +961,29 @@
                 color: #ffffff;
             }
             
-            /* All text inside response areas - fix grayed out text */
-            .response-area h1, 
-            .response-area h2, 
-            .response-area h3, 
-            .response-area h4, 
-            .response-area h5, 
-            .response-area h6 {
+            /* Generated response preview area - don't override */
+            #response-preview {
+                background: #ffffff;
+                color: #000000;
+            }
+            
+            #response-preview * {
+                color: #000000;
+            }
+            
+            /* AI response text in other areas */
+            #overview-response h1, #overview-response h2, #overview-response h3, #overview-response h4,
+            #analyzer-response h1, #analyzer-response h2, #analyzer-response h3, #analyzer-response h4,
+            #ai-response h1, #ai-response h2, #ai-response h3, #ai-response h4,
+            #calendar-response h1, #calendar-response h2, #calendar-response h3, #calendar-response h4 {
                 color: #ffffff !important;
                 font-weight: bold !important;
             }
             
-            .response-area p,
-            .response-area div,
-            .response-area span,
-            .response-area li,
-            .response-area strong,
-            .response-area em,
-            .response-area * {
+            #overview-response p, #overview-response div, #overview-response span, #overview-response li,
+            #analyzer-response p, #analyzer-response div, #analyzer-response span, #analyzer-response li,
+            #ai-response p, #ai-response div, #ai-response span, #ai-response li,
+            #calendar-response p, #calendar-response div, #calendar-response span, #calendar-response li {
                 color: #ffffff !important;
             }
             
