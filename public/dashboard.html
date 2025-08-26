@@ -909,7 +909,7 @@
             }
         }
 
-               /* Enhanced Dark mode support */
+              /* Enhanced Dark mode support */
         @media (prefers-color-scheme: dark) {
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
@@ -922,14 +922,26 @@
                 border: 1px solid #4a4a4a;
             }
             
-            /* Input fields - only main dashboard inputs */
-            .form-input, .form-select, .form-textarea {
+            /* Exclude modal forms from dark styling */
+            .modal input, .modal textarea, .modal select,
+            [style*="background: white"] input,
+            [style*="background: white"] textarea,
+            [style*="background: white"] select {
+                background: white !important;
+                color: #333 !important;
+                border-color: #ccc !important;
+            }
+            
+            /* Only main dashboard form elements */
+            .form-input:not(.modal .form-input), 
+            .form-select:not(.modal .form-select), 
+            .form-textarea:not(.modal .form-textarea) {
                 background: #3a3a3a;
                 border-color: #667eea;
                 color: #ffffff;
             }
             
-            /* Specific problematic inputs */
+            /* Specific dashboard inputs only */
             #signature-email, #signature-website, #signature-additional,
             #response-context, #calendar-query, #analyzer-query, #ai-query {
                 background: #3a3a3a !important;
@@ -940,13 +952,6 @@
             #response-context:focus, #calendar-query:focus, #analyzer-query:focus, #ai-query:focus {
                 background: #3a3a3a !important;
                 color: #ffffff !important;
-            }
-            
-            .form-input::placeholder,
-            .form-select::placeholder, 
-            .form-textarea::placeholder {
-                color: #cccccc;
-                opacity: 1;
             }
             
             /* Response areas */
@@ -963,11 +968,8 @@
                 color: #ffffff !important;
             }
             
-            /* Fix white backgrounds in email responses */
-            .email-item.selected,
-            #response-content div[style*="background: white"],
-            #response-content div[style*="background:#fff"],
-            #response-content div[style*="background: #fff"] {
+            /* Fix email response white backgrounds */
+            #response-content div[style*="background: white"] {
                 background: #3a3a3a !important;
             }
             
