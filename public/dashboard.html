@@ -1140,8 +1140,14 @@
         
             .email-item.active,
             .list-group-item.active {
-                background-color: #2f3645 !important;
-                border-color: #667eea !important;
+                background-color: #2f3645 !important;  /* darker accent background */
+                border-color: #667eea !important;      /* keeps consistent with your theme */
+                box-shadow: 0 0 8px rgba(102, 126, 234, 0.7); /* subtle glowing highlight */
+                color: #ffffff !important;
+            }
+            
+            .email-item.active * {
+                color: #ffffff !important; /* ensures text is bright when active */
             }
         
             /* Secondary text dimming */
