@@ -2083,7 +2083,7 @@ async function loadEmailsForResponse() {
         loadButton.textContent = '📄 Loading Emails...';
         loadButton.disabled = true;
         
-        // Load emails from past 7 days instead of 3, with more comprehensive data
+        // Load emails from past 7 days
         const response = await fetch('/api/emails?days=7');
         
         if (response.ok) {
@@ -2091,24 +2091,30 @@ async function loadEmailsForResponse() {
             
             console.log('📧 Loaded emails for response:', {
                 totalEmails: data.count,
-                daysLoaded: data.totalDays,
-                dateRange: data.dateRange
+                success: true
             });
             
             displayEmailList(data.emails);
             document.getElementById('email-list-container').style.display = 'block';
             
-            // Show summary of loaded emails
+            // FIXED: Remove any existing summary before adding new one
+            const emailListContainer = document.getElementById('email-list-container');
+            const existingSummary = emailListContainer.querySelector('div[style*="background: #d4edda"]');
+            if (existingSummary) {
+                existingSummary.remove();
+            }
+            
+            // Add ONLY ONE success summary
             const summaryDiv = document.createElement('div');
-            summaryDiv.style.cssText = 'background: #e8f4f8; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #17a2b8;';
+            summaryDiv.style.cssText = 'background: #d4edda; color: #155724; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #c3e6cb;';
             summaryDiv.innerHTML = `
-                <strong>📊 Loaded ${data.count} emails</strong> from the past ${data.totalDays} days<br>
+                <strong>✅ Successfully loaded ${data.count} emails</strong> from the past 7 days<br>
                 <small style="color: #666;">
-                    From ${new Date(data.dateRange.since).toLocaleDateString()} to ${new Date(data.dateRange.until).toLocaleDateString()}
+                    Ready to generate AI responses - select an email below
                 </small>
             `;
             
-            const emailListContainer = document.getElementById('email-list-container');
+            // Insert at the beginning
             emailListContainer.insertBefore(summaryDiv, emailListContainer.firstChild);
             
             // Restore button
@@ -2116,17 +2122,21 @@ async function loadEmailsForResponse() {
             loadButton.disabled = false;
             
         } else {
-            alert('Failed to load emails');
+            // Only show error if there's actually an error
+            const errorData = await response.json();
+            console.error('❌ Error loading emails:', errorData);
+            alert(`Error loading emails: ${errorData.message || 'Unknown error'}`);
             loadButton.textContent = originalText;
             loadButton.disabled = false;
         }
     } catch (error) {
-        console.error('Error loading emails:', error);
-        alert('Failed to load emails');
+        // Only show error for actual network/connection errors
+        console.error('❌ Network error loading emails:', error);
+        alert(`Network error loading emails: ${error.message}`);
         
         // Restore button state
         const loadButton = document.querySelector('button[onclick="loadEmailsForResponse()"]');
-        loadButton.textContent = '📄 Load Recent Emails';
+        loadButton.textContent = '📧 Load Recent Emails';
         loadButton.disabled = false;
     }
 }
@@ -2378,55 +2388,55 @@ async function moveSelectedToTrash() {
             document.getElementById('response-preview').style.display = 'block';
             
             try {
+                console.log('🤖 Generating response for email:', selectedEmailId);
+                
                 const response = await fetch(`/api/emails/${selectedEmailId}/respond`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ context, tone })
                 });
                 
+                console.log('📥 Response status:', response.status);
+                
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('✅ Response generated successfully:', data);
+                    
                     generatedResponse = data;
                     
-                    // Display the response with threading information
+                    // CLEANED UP: Removed blue notification and unnecessary details
                     document.getElementById('response-content').innerHTML = `
                         <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #28a745;">
-                            <h4 style="margin: 0 0 0.5rem; color: #155724;">🧵 Email Thread Reply</h4>
+                            <h4 style="margin: 0 0 0.5rem; color: #155724;">🧵 Email Reply</h4>
                             <p style="margin: 0; color: #666; font-size: 0.9rem;">
                                 <strong>Reply to:</strong> ${data.originalFrom}<br>
                                 <strong>Subject:</strong> ${data.suggestedSubject}<br>
-                                <strong>Thread:</strong> This will be sent as a reply to maintain the email thread
-                                ${data.signatureIncluded ? '<br><strong>Signature:</strong> Your signature will be included' : ''}
+                                <strong>Type:</strong> Reply to maintain email thread
                             </p>
                         </div>
                         
-                        <div class="response-content">
-                            ${data.generatedResponse.replace(/\n/g, '<br>')}
-                        </div>
-                        
-                        <div style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
-                            <p style="margin: 0; font-size: 0.9rem; color: #1565c0;">
-                                <strong>💡 Threading Note:</strong> This response will be sent as a reply to the original email, 
-                                maintaining the conversation thread for better email organization.
-                            </p>
+                        <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 2px solid #e1e5e9;">
+                            <h4 style="margin-bottom: 1rem; color: #333;">Generated Response:</h4>
+                            <div style="white-space: pre-wrap; line-height: 1.6;">${data.generatedResponse}</div>
                         </div>
                     `;
                     
                     // Show send buttons
-                    document.getElementById('send-buttons').style.display = 'block';
+                    document.getElementById('send-buttons').style.display = 'flex';
                 } else {
                     const errorData = await response.json();
+                    console.error('❌ Error generating response:', errorData);
                     document.getElementById('response-content').innerHTML = `
                         <div style="color: #d32f2f; background: #ffebee; padding: 1rem; border-radius: 8px;">
-                            Error: ${errorData.message || 'Failed to generate response'}
+                            Error: ${errorData.message || errorData.error || 'Failed to generate response'}
                         </div>
                     `;
                 }
             } catch (error) {
-                console.error('Error generating response:', error);
+                console.error('❌ Network error generating response:', error);
                 document.getElementById('response-content').innerHTML = `
                     <div style="color: #d32f2f; background: #ffebee; padding: 1rem; border-radius: 8px;">
-                        Error: Failed to generate response. Please try again.
+                        Error: Failed to connect to AI service. Please check your connection and try again.
                     </div>
                 `;
             }
@@ -2459,7 +2469,7 @@ async function moveSelectedToTrash() {
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Show success message with threading confirmation
+                    // REMOVED: Blue notification bar - Show clean success message
                     const successDiv = document.createElement('div');
                     successDiv.style.cssText = 'background: #d4edda; color: #155724; padding: 1.5rem; border-radius: 8px; margin: 1rem 0; border: 1px solid #c3e6cb;';
                     successDiv.innerHTML = `
@@ -2472,14 +2482,6 @@ async function moveSelectedToTrash() {
                                 </p>
                             </div>
                         </div>
-                        
-                        <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
-                            <strong>📊 Details:</strong><br>
-                            • Thread maintained: Yes<br>
-                            • Reply type: ${data.replyType}<br>
-                            • Sent by: ${data.sentBy}<br>
-                            • Message ID: ${data.messageId?.substring(0, 20)}...
-                        </div>
                     `;
                     
                     // Insert success message
@@ -2490,12 +2492,12 @@ async function moveSelectedToTrash() {
                     document.getElementById('response-form').style.display = 'none';
                     document.getElementById('response-preview').style.display = 'none';
                     
-                    // Remove success message after 8 seconds
+                    // Remove success message after 5 seconds
                     setTimeout(() => {
                         if (successDiv.parentNode) {
                             successDiv.remove();
                         }
-                    }, 8000);
+                    }, 5000);
                     
                     // Update stats
                     if (typeof loadStats === 'function') {
@@ -2515,6 +2517,7 @@ async function moveSelectedToTrash() {
                 sendBtn.disabled = false;
             }
         }
+
         function editResponse() {
             if (!generatedResponse) return;
             
