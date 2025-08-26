@@ -922,28 +922,46 @@
                 border: 1px solid #4a4a4a;
             }
             
-            /* Input fields - properly scoped to dark mode only */
-            .form-input, .form-select, .form-textarea {
+            /* All input fields - including the problematic ones */
+            .form-input, .form-select, .form-textarea,
+            input[type="text"], input[type="email"], input[type="url"], input[type="tel"],
+            textarea, select,
+            #signature-email, #signature-website, #signature-additional,
+            #response-context, #calendar-query, #analyzer-query, #ai-query {
                 background: #3a3a3a;
                 border-color: #667eea;
                 color: #ffffff;
             }
             
+            /* Input focus states */
+            .form-input:focus, .form-select:focus, .form-textarea:focus,
+            input[type="text"]:focus, input[type="email"]:focus, input[type="url"]:focus, input[type="tel"]:focus,
+            textarea:focus, select:focus,
+            #signature-email:focus, #signature-website:focus, #signature-additional:focus,
+            #response-context:focus, #calendar-query:focus, #analyzer-query:focus, #ai-query:focus {
+                background: #3a3a3a;
+                border-color: #667eea;
+                color: #ffffff;
+                outline: none;
+            }
+            
             .form-input::placeholder,
             .form-select::placeholder, 
-            .form-textarea::placeholder {
+            .form-textarea::placeholder,
+            input::placeholder,
+            textarea::placeholder {
                 color: #cccccc;
                 opacity: 1;
             }
             
-            /* Response areas - properly scoped */
+            /* Response areas */
             .response-area {
                 background: #3a3a3a;
                 border-color: #667eea;
                 color: #ffffff;
             }
             
-            /* All text inside response areas */
+            /* All text inside response areas - fix grayed out text */
             .response-area *,
             .response-area h1, 
             .response-area h2, 
