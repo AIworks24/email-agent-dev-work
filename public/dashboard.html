@@ -912,7 +912,7 @@
       
         /* Enhanced Dark mode support - COMPLETE FIX */
         @media (prefers-color-scheme: dark) {
-            
+                    
             /* 1. BASE STYLING - Body and main containers */
             body {
                 background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
@@ -932,7 +932,7 @@
                 border: 1px solid #4a4a4a !important;
             }
             
-            /* 3. FORM INPUTS - This fixes the main white text on white background issue */
+            /* 3. FORM INPUTS */
             .form-input, 
             .form-select, 
             .form-textarea,
@@ -975,14 +975,13 @@
                 opacity: 1 !important;
             }
             
-            /* 6. RESPONSE AREAS - Generated email content areas */
+            /* 6. RESPONSE AREAS */
             .response-area {
                 background: #3a3a3a !important;
                 border: 2px solid #667eea !important;
                 color: #ffffff !important;
             }
             
-            /* 7. ALL TEXT INSIDE RESPONSE AREAS */
             .response-area *,
             .response-area h1, 
             .response-area h2, 
@@ -1036,13 +1035,13 @@
                 color: #4ade80 !important;
                 border-color: #22c55e !important;
             }
-
+        
             .status-error {
                 background: #4a1a1a !important;
                 color: #f87171 !important;
                 border-color: #ef4444 !important;
             }
-
+        
             .status-info {
                 background: #1a1a4a !important;
                 color: #60a5fa !important;
@@ -1075,7 +1074,7 @@
                 color: #667eea !important;
             }
             
-            /* 15. TABLES (if any) */
+            /* 15. TABLES */
             table {
                 background: #2a2a2a !important;
                 color: #ffffff !important;
@@ -1086,13 +1085,13 @@
                 color: #ffffff !important;
             }
             
-            /* 16. DROPDOWNS AND SELECTS */
+            /* 16. DROPDOWNS */
             option {
                 background: #3a3a3a !important;
                 color: #ffffff !important;
             }
             
-            /* 17. SPECIFIC FIXES FOR EMAIL CONTROLS */
+            /* 17. EMAIL CONTROLS */
             #email-controls {
                 background: #2a2a2a !important;
                 border-color: #4a4a4a !important;
@@ -1103,15 +1102,10 @@
                 color: #ffffff !important;
             }
             
-            /* 18. SELECTED COUNT AND BADGES */
+            /* 18. SELECTED COUNT */
             #selected-count {
                 background: #667eea !important;
                 color: white !important;
-            }
-            
-            /* 19. QUICK ACTIONS - Keep gradient but ensure text is visible */
-            .quick-action {
-                /* Keep existing gradient */
             }
             
             /* 20. FORM VALIDATION MESSAGES */
@@ -1126,108 +1120,38 @@
                 color: #4ade80 !important;
                 background: #1a4a1a !important;
             }
-             /* Colors for this section */
-          #email-responder {
-            --email-bg: #1f1f1f;
-            --email-border: #3a3a3a;
-            --email-text: #f5f5f5;
-            --email-secondary: #b0b0b0;
-            --email-meta: #999999;
-            --email-hover: #262626;
-            --email-selected: #1f2937; /* dark slate blue */
-            --email-selected-border: #667eea;
-          }
         
-          /* Base row (covers div/li/table-row approaches) */
-          #email-responder .email-item,
-          #email-responder .list-group-item,
-          #email-responder .card,
-          #email-responder .email-row,
-          #email-responder > .email-item,
-          #email-responder > div {
-            background-color: var(--email-bg) !important;
-            color: var(--email-text) !important;
-            border-color: var(--email-border) !important;
-          }
-        
-          /* Nuke common “light” utility classes inside the list */
-          #email-responder .bg-white,
-          #email-responder .bg-light,
-          #email-responder .card,
-          #email-responder .list-group-item,
-          #email-responder [class*="bg-"],
-          #email-responder [class*="text-gray"],
-          #email-responder .text-muted {
-            background-color: var(--email-bg) !important;
-            color: var(--email-secondary) !important;
-          }
-        
-          /* Ensure all text inside rows is readable */
-          #email-responder .email-item * {
-            color: var(--email-text) !important;
-            background: transparent !important;
-          }
-        
-          /* Secondary text (preview line) */
-          #email-responder .email-preview,
-          #email-responder .email-preview * {
-            color: var(--email-secondary) !important;
-          }
-        
-          /* Meta line (date, tags) */
-          #email-responder .email-meta,
-          #email-responder .email-meta * {
-            color: var(--email-meta) !important;
-          }
-        
-          /* Sender */
-          #email-responder .email-from,
-          #email-responder .email-from * {
-            color: #cccccc !important;
-          }
-        
-          /* Hover */
-          #email-responder .email-item:hover {
-            background-color: var(--email-hover) !important;
-          }
-        
-          /* Selected/active states (covers multiple patterns) */
-          #email-responder .email-item.selected,
-          #email-responder .email-item.active,
-          #email-responder .list-group-item.active,
-          #email-responder .email-item:has(input[type="checkbox"]:checked) {
-            background-color: var(--email-selected) !important;
-            border-color: var(--email-selected-border) !important;
-            box-shadow: 0 0 0 2px rgba(102,126,234,0.35) inset !important;
-          }
-        
-          /* If rows are <tr> inside a <table> */
-          #email-responder tr,
-          #email-responder td,
-          #email-responder th {
-            background-color: var(--email-bg) !important;
-            color: var(--email-text) !important;
-            border-color: var(--email-border) !important;
-          }
-        
-           
-                
+            /* ✅ FIXED EMAIL LIST ITEMS */
             .email-item,
-            .email-item *,
-            .email-item div,
-            .email-item span {
-                color: #ffffff !important;
+            .list-group-item {
+                background-color: #1e1e1e !important;
+                color: #f5f5f5 !important;
+                border: 1px solid #333 !important;
             }
-            
-            /* VISUAL HIERARCHY - Make some text dimmer for readability */
+        
+            .email-item * {
+                color: #f5f5f5 !important;
+            }
+        
+            .email-item:hover,
+            .list-group-item:hover {
+                background-color: #2a2a2a !important;
+            }
+        
+            .email-item.active,
+            .list-group-item.active {
+                background-color: #2f3645 !important;
+                border-color: #667eea !important;
+            }
+        
+            /* Secondary text dimming */
             .email-preview,
             .email-preview * {
                 color: #b0b0b0 !important;
             }
             
             .email-meta,
-            .email-meta *,
-            .email-meta span {
+            .email-meta * {
                 color: #999999 !important;
             }
             
@@ -1236,6 +1160,7 @@
                 color: #cccccc !important;
             }
         }
+
     </style>
 </head>
 <body>
