@@ -1125,130 +1125,29 @@
             .validation-success {
                 color: #4ade80 !important;
                 background: #1a4a1a !important;
-         /* EMAIL LIST CONTAINER */
-            .email-list {
-                background: #2a2a2a !important;
-                border: 2px solid #4a4a4a !important;
-            }
-            
-            /* EMAIL ITEMS - Main container for each email */
-            .email-item {
-                background: #2a2a2a !important;
-                border-bottom: 1px solid #4a4a4a !important;
+                
+            .email-item,
+            .email-item *,
+            .email-item div,
+            .email-item span {
                 color: #ffffff !important;
             }
             
-            /* EMAIL ITEM HOVER STATE */
-            .email-item:hover {
-                background: #3a3a3a !important;
-                color: #ffffff !important;
-            }
-            
-            /* EMAIL ITEM SELECTED STATE */
-            .email-item.selected {
-                background: #1a3a5f !important;
-                border-left: 4px solid #667eea !important;
-                color: #ffffff !important;
-            }
-            
-            /* EMAIL ITEM UNREAD STATE */
-            .email-item.unread {
-                background: rgba(255, 165, 0, 0.1) !important;
-                border-left: 3px solid #ffa500 !important;
-                color: #ffffff !important;
-            }
-            
-            /* EMAIL SUBJECT LINE */
-            .email-subject {
-                color: #ffffff !important;
-                font-weight: 600 !important;
-            }
-            
-            /* EMAIL FROM LINE */
-            .email-from {
-                color: #cccccc !important;
-                font-weight: 500 !important;
-            }
-            
-            /* EMAIL PREVIEW TEXT */
-            .email-preview {
+            /* VISUAL HIERARCHY - Make some text dimmer for readability */
+            .email-preview,
+            .email-preview * {
                 color: #b0b0b0 !important;
             }
             
-            /* EMAIL META INFO (date, read status, etc.) */
-            .email-meta {
-                color: #999999 !important;
-            }
-            
-            /* EMAIL META SPANS */
+            .email-meta,
+            .email-meta *,
             .email-meta span {
                 color: #999999 !important;
             }
             
-            /* EMAIL CONTROLS SECTION */
-            #email-controls {
-                background: #2a2a2a !important;
-                border: 1px solid #4a4a4a !important;
-                color: #ffffff !important;
-            }
-            
-            /* EMAIL CONTROLS TEXT AND LABELS */
-            #email-controls label,
-            #email-controls span,
-            #email-controls div {
-                color: #ffffff !important;
-            }
-            
-            /* SELECTED COUNT DISPLAY */
-            #selected-count {
-                background: #667eea !important;
-                color: white !important;
-                border-radius: 4px !important;
-                padding: 0.25rem 0.5rem !important;
-            }
-            
-            /* MOVE SELECTED BUTTON */
-            #move-selected-btn {
-                background: #6c757d !important;
-                color: white !important;
-            }
-            
-            #move-selected-btn:hover:not(:disabled) {
-                background: #5a6268 !important;
-            }
-            
-            #move-selected-btn:disabled {
-                opacity: 0.5 !important;
-            }
-            
-            /* CHECKBOXES */
-            .email-checkbox,
-            #select-all-emails {
-                accent-color: #667eea !important;
-            }
-            
-            /* NO EMAILS MESSAGE */
-            .email-list div[style*="text-align: center"] {
+            .email-from,
+            .email-from * {
                 color: #cccccc !important;
-            }
-            
-            /* EMAIL LIST CONTAINER HEADING */
-            #email-list-container h3 {
-                color: #ffffff !important;
-            }
-            
-            /* ANY OTHER TEXT INSIDE EMAIL ITEMS */
-            .email-item * {
-                color: inherit !important;
-            }
-            
-            /* SPECIFIC FIX FOR INLINE STYLES */
-            .email-item div[style*="cursor: pointer"] {
-                color: inherit !important;
-            }
-            
-            .email-item div[style*="cursor: pointer"] * {
-                color: inherit !important;
             }
         }
     </style>
