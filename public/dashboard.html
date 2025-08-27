@@ -1433,12 +1433,16 @@
                             <span>📤</span>
                             Send Reply
                         </button>
-                        <button class="btn btn-outline" onclick="sendResponse(true)">
+                        <button class="btn btn-outline" onclick="sendResponse(true)" style="margin-right: 1rem;">
                             <span>📧</span>
                             Reply to All
                         </button>
+                        <button class="btn btn-outline" onclick="editResponse()" style="margin-right: 1rem; background: #fff3cd; color: #856404; border-color: #ffeaa7;">
+                            <span>✏️</span>
+                            Edit
+                        </button>
                         <button class="btn btn-outline" onclick="document.getElementById('response-preview').style.display='none'; document.getElementById('send-buttons').style.display='none';" 
-                                style="margin-left: 1rem; background: #f8f9fa; color: #666;">
+                                style="background: #f8f9fa; color: #666;">
                             Cancel
                         </button>
                     </div>
